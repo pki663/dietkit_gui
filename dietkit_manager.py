@@ -1,13 +1,14 @@
 import sys
 import pandas as pd
 import os
-from PyQt5.QtWidgets import QApplication, QWidget, QDesktopWidget, QMainWindow, QAction, QTableWidget, QTableWidgetItem, QScrollArea, QGridLayout, QInputDialog, QMessageBox, QFileDialog, QDialog, QVBoxLayout, QHBoxLayout, QCheckBox, QDialogButtonBox
+from PyQt5.QtWidgets import QApplication, QWidget, QDesktopWidget, QMainWindow, QAction, QTableWidget, QTableWidgetItem, QScrollArea, QGridLayout, QInputDialog, QMessageBox, QFileDialog, QDialog, QVBoxLayout, QHBoxLayout, QCheckBox, QDialogButtonBox, QPushButton
 from PyQt5.QtWidgets import qApp
 from PyQt5.QtGui import QIcon
 from PyQt5 import QtCore, QtGui
 
 class MyApp(QMainWindow):
     df = pd.DataFrame()
+    allergy_df = pd.DataFrame()
     allergy_checked = False
     nutrition_checked = False
 
@@ -29,6 +30,14 @@ class MyApp(QMainWindow):
         scroll.setWidget(self.table)
         self.table.cellDoubleClicked.connect(self.modifyTable)
         self.table.cellClicked.connect(self.cellinfo)
+        self.table.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
+
+        nutritionContextAction = QAction('영양량 보기', self.table)
+        ingredientContextAction = QAction('식재료 보기', self.table)
+        nutritionContextAction.triggered.connect(self.cellnutrition)
+        ingredientContextAction.triggered.connect(self.cellingredient)     
+        self.table.addAction(nutritionContextAction)        
+        self.table.addAction(ingredientContextAction)           
 
         layout.addWidget(self.table, 0, 0)
 
@@ -141,7 +150,8 @@ class MyApp(QMainWindow):
         self.statusBar().showMessage('식단표 생성이 완료되었습니다. 편집을 원하는 칸을 더블클릭하면 메뉴를 삽입할 수 있습니다.')
 
     def modifyTable(self, row, column):
-        content, dummy = QInputDialog.getItem(self, "메뉴 선택", "선택한 칸에 들어갈 메뉴를 선택하세요.\n힌트: 메뉴명의 앞부분을 치고 →키를 누르면 일치하는 메뉴를 바로 찾을 수 있습니다.", sorted(self.menus.index.get_level_values(0).drop_duplicates().tolist()), 0, editable = True)
+        combo_items = sorted(self.menus.index.get_level_values(0).drop_duplicates().tolist())
+        content, dummy = QInputDialog.getItem(self, "메뉴 선택", "선택한 칸에 들어갈 메뉴를 선택하세요.\n힌트: 메뉴명의 앞부분을 치고 →키를 누르면 일치하는 메뉴를 바로 찾을 수 있습니다.", combo_items, current = combo_items.index(self.df.iloc[row, column]), editable = True)
         self.df.iloc[row, column] = content
         self.allergy_df.iloc[row, column] = []
         self.table.setItem(row, column, QTableWidgetItem(content))
@@ -149,7 +159,10 @@ class MyApp(QMainWindow):
 
     def loadTable(self):
         fname = QFileDialog.getOpenFileName(self, '식단표 위치', './', filter = '*.csv')
+        if fname[0] == '':
+            return
         self.df = pd.read_csv(fname[0], index_col = 0, encoding = 'cp949')
+        self.allergy_df = pd.DataFrame(index = range(self.df.shape[0]), columns = range(self.df.shape[1]), data = [])
         self.table.setColumnCount(self.df.shape[1])
         self.table.setRowCount(self.df.shape[0])
         self.setTable()
@@ -157,7 +170,8 @@ class MyApp(QMainWindow):
 
     def saveTable(self):
         fname = QFileDialog.getSaveFileName(self, '저장 위치', './', filter = '*.csv')
-        self.df.to_csv(fname[0], index = True, encoding = 'cp949')
+        if fname[0] != '':
+            self.df.to_csv(fname[0], index = True, encoding = 'cp949')
 
     def cellinfo(self, row, column):
         message = ''
@@ -165,6 +179,60 @@ class MyApp(QMainWindow):
             message += '알러지 문제가 발견됨: '
             message += str(self.allergy_df.iloc[row, column])
         self.statusBar().showMessage(message)
+
+    def cellnutrition(self):
+        menu_name = self.df.iloc[self.table.selectedIndexes()[0].row(), self.table.selectedIndexes()[0].column()]
+        nutrition_info = self.nutrition.loc[menu_name]
+        a = QDialog()
+        a.resize(550, 800)
+        a.setWindowTitle(menu_name + '의 영양량')
+        vbox = QVBoxLayout()
+        nutrition_table = QTableWidget()
+        vbox.addWidget(nutrition_table)
+        nutrition_table.setColumnCount(2)
+        nutrition_table.setRowCount(len(self.nutrition.columns))
+        nutrition_table.verticalHeader().hide()
+        nutrition_table.setHorizontalHeaderLabels(['영양소', '함량'])
+        count = 0
+        for idx in nutrition_info.index:
+            nutrition_table.setItem(count, 0, QTableWidgetItem(str(idx)))
+            nutrition_table.setItem(count, 1, QTableWidgetItem(str(nutrition_info.loc[idx])))
+            count += 1
+        okbutton = QDialogButtonBox()
+        okbutton.setOrientation(QtCore.Qt.Horizontal)
+        okbutton.setStandardButtons(QDialogButtonBox.Ok)
+        okbutton.accepted.connect(a.close)
+        vbox.addWidget(okbutton, 0, QtCore.Qt.AlignHCenter)
+        a.setLayout(vbox)
+        a.show()
+        a.exec_()
+
+    def cellingredient(self):
+        menu_name = self.df.iloc[self.table.selectedIndexes()[0].row(), self.table.selectedIndexes()[0].column()]
+        ing_info = self.menus.xs(menu_name).iloc[:,0].to_dict().items()
+        a = QDialog()
+        a.resize(550, 800)
+        a.setWindowTitle(menu_name + '의 성분표')
+        vbox = QVBoxLayout()
+        ingredient_table = QTableWidget()
+        vbox.addWidget(ingredient_table)
+        ingredient_table.setColumnCount(2)
+        ingredient_table.setRowCount(len(ing_info))
+        ingredient_table.verticalHeader().hide()
+        ingredient_table.setHorizontalHeaderLabels(['식재료', '함량'])
+        count = 0
+        for k, v in ing_info:
+            ingredient_table.setItem(count, 0, QTableWidgetItem(str(k)))
+            ingredient_table.setItem(count, 1, QTableWidgetItem(str(v)))
+            count += 1
+        okbutton = QDialogButtonBox()
+        okbutton.setOrientation(QtCore.Qt.Horizontal)
+        okbutton.setStandardButtons(QDialogButtonBox.Ok)
+        okbutton.accepted.connect(a.close)
+        vbox.addWidget(okbutton, 0, QtCore.Qt.AlignHCenter)
+        a.setLayout(vbox)
+        a.show()
+        a.exec_()
         
     def checkallergy(self):
         win = AllergyWindow()
@@ -187,7 +255,8 @@ class MyApp(QMainWindow):
             for col in self.df.columns:
                 menu_nutrition.loc[row] += self.nutrition.loc[self.df.loc[row, col]]
         fname = QFileDialog.getSaveFileName(self, '영양량 리스트의 저장 위치', './', filter = '*.csv')
-        menu_nutrition.to_csv(fname[0], index = True, encoding = 'cp949')
+        if fname[0] != '':
+            menu_nutrition.to_csv(fname[0], index = True, encoding = 'cp949')
 
     def checkingredient(self):
         ingredient_df = pd.DataFrame(columns=['식단번호', '메뉴일련번호', '메뉴', '식재료', '함량(g)'])
@@ -197,7 +266,8 @@ class MyApp(QMainWindow):
                 for k, v in self.menus.xs(self.df.iloc[row, col]).iloc[:,0].to_dict().items():
                     ingredient_df.loc[(row, col, self.df.iloc[row, col], k)] = v
         fname = QFileDialog.getSaveFileName(self, '식재료 리스트의 저장 위치', './', filter = '*.csv')
-        ingredient_df.to_csv(fname[0], index = True, encoding = 'cp949')
+        if fname[0] != '':
+            ingredient_df.to_csv(fname[0], index = True, encoding = 'cp949')
 
     def dummyfunc(self):
         a = QMessageBox()
