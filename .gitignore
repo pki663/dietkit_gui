@@ -4,3 +4,10 @@
 /icons
 /sandbox.py
 /test.csv
+/build
+/dist
+/__pycache__
+dietkit.exe.spec
+dietkit_manager.spec
+dietkit.spec
+test.exe.spec

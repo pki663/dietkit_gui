@@ -6,6 +6,8 @@ from PyQt5.QtWidgets import qApp
 from PyQt5.QtGui import QIcon
 from PyQt5 import QtCore, QtGui
 
+from allergy_checker import *
+
 class MyApp(QMainWindow):
     df = pd.DataFrame()
     allergy_df = pd.DataFrame()
@@ -274,103 +276,6 @@ class MyApp(QMainWindow):
         a.setText('미구현')
         a.setStandardButtons(QMessageBox.Ok)
         a.exec_()
-
-class AllergyWindow(QDialog):
-    checklist = []
-    def __init__(self):
-        super().__init__()
-        self.initUI()
-
-    def initUI(self):
-        self.setWindowTitle('알러지 검사')
-        vbox = QVBoxLayout()
-        hbox_1 = QHBoxLayout()
-        self.cbox_1 = QCheckBox('난류')
-        hbox_1.addWidget(self.cbox_1)
-        self.cbox_2 = QCheckBox('우유')
-        hbox_1.addWidget(self.cbox_2)
-        self.cbox_3 = QCheckBox('땅콩')
-        hbox_1.addWidget(self.cbox_3)
-        self.cbox_4 = QCheckBox('대두')
-        hbox_1.addWidget(self.cbox_4)
-        vbox.addLayout(hbox_1)
-        hbox_2 = QHBoxLayout()
-        self.cbox_5 = QCheckBox('밀')
-        hbox_2.addWidget(self.cbox_5)
-        self.cbox_6 = QCheckBox('메밀')
-        hbox_2.addWidget(self.cbox_6)
-        self.cbox_7 = QCheckBox('고등어')
-        hbox_2.addWidget(self.cbox_7)
-        self.cbox_8 = QCheckBox('게')
-        hbox_2.addWidget(self.cbox_8)
-        vbox.addLayout(hbox_2)
-        hbox_3 = QHBoxLayout()
-        self.cbox_9 = QCheckBox('새우')
-        hbox_3.addWidget(self.cbox_9)
-        self.cbox_10 = QCheckBox('돼지고기')
-        hbox_3.addWidget(self.cbox_10)
-        self.cbox_11 = QCheckBox('복숭아')
-        hbox_3.addWidget(self.cbox_11)
-        self.cbox_12 = QCheckBox('토마토')
-        hbox_3.addWidget(self.cbox_12)
-        vbox.addLayout(hbox_3)
-        hbox_4 = QHBoxLayout()
-        self.cbox_13 = QCheckBox('아황산류')
-        hbox_4.addWidget(self.cbox_13)
-        self.cbox_14 = QCheckBox('호두')
-        hbox_4.addWidget(self.cbox_14)
-        self.cbox_15 = QCheckBox('닭고기')
-        hbox_4.addWidget(self.cbox_15)
-        self.cbox_16 = QCheckBox('쇠고기')
-        hbox_4.addWidget(self.cbox_16)
-        vbox.addLayout(hbox_4)
-        hbox_5 = QHBoxLayout()
-        self.cbox_17 = QCheckBox('오징어')
-        hbox_5.addWidget(self.cbox_17)
-        self.cbox_18 = QCheckBox('조개류')
-        hbox_5.addWidget(self.cbox_18)
-        self.cbox_19 = QCheckBox('굴')
-        hbox_5.addWidget(self.cbox_19)
-        self.cbox_20 = QCheckBox('전복')
-        hbox_5.addWidget(self.cbox_20)
-        vbox.addLayout(hbox_5)
-        hbox_6 = QHBoxLayout()
-        self.cbox_21 = QCheckBox('홍합')
-        hbox_6.addWidget(self.cbox_21)
-        self.cbox_22 = QCheckBox('들깨')
-        hbox_6.addWidget(self.cbox_22)
-        self.cbox_23 = QCheckBox('잣')
-        hbox_6.addWidget(self.cbox_23)
-        self.cbox_24 = QCheckBox('아몬드')
-        hbox_6.addWidget(self.cbox_24)
-        vbox.addLayout(hbox_6)
-        hbox_7 = QHBoxLayout()
-        self.cbox_25 = QCheckBox('헤즐넛')
-        hbox_7.addWidget(self.cbox_25)
-        self.cbox_26 = QCheckBox('꼬막')
-        hbox_7.addWidget(self.cbox_26)
-        self.cbox_27 = QCheckBox('감자')
-        hbox_7.addWidget(self.cbox_27)
-        self.cbox_28 = QCheckBox('멸치')
-        hbox_7.addWidget(self.cbox_28)
-        vbox.addLayout(hbox_7)
-        self.buttonBox = QDialogButtonBox()
-        self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
-        self.buttonBox.setStandardButtons(QDialogButtonBox.Ok|QDialogButtonBox.Cancel)
-        vbox.addWidget(self.buttonBox, 0, QtCore.Qt.AlignHCenter)
-        self.buttonBox.accepted.connect(self.getChecklist)
-        self.buttonBox.rejected.connect(self.close)
-        self.setLayout(vbox)
-        self.show()
-        self.exec_()
-    
-    def getChecklist(self):
-        checked = []
-        for checkbox in [self.cbox_1, self.cbox_2, self.cbox_3, self.cbox_4, self.cbox_5, self.cbox_6, self.cbox_7, self.cbox_8, self.cbox_9, self.cbox_10, self.cbox_11, self.cbox_12, self.cbox_13, self.cbox_14, self.cbox_15, self.cbox_16, self.cbox_17, self.cbox_18, self.cbox_19, self.cbox_20, self.cbox_21, self.cbox_22, self.cbox_23, self.cbox_24, self.cbox_25, self.cbox_26, self.cbox_27, self.cbox_28]:
-            if checkbox.isChecked():
-                checked.append(checkbox.text())
-        self.checklist = checked
-        self.close()
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
