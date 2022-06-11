@@ -11,3 +11,4 @@ dietkit.exe.spec
 dietkit_manager.spec
 dietkit.spec
 test.exe.spec
+sample_error_diet.csv
