@@ -93,7 +93,7 @@ class MyApp(QMainWindow):
         datamenu.addAction(menuloadAction)                
 
         self.setWindowTitle('Dietkit')
-        self.setWindowIcon(QIcon('icon.png'))
+        self.setWindowIcon(QIcon('icon.ico'))
 
         self.setCentralWidget(widget)
         self.statusBar().showMessage('식단 메뉴에서 새로 만들기 또는 불러오기를 통해 식단표 작성을 시작합니다.')
