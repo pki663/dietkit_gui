@@ -186,6 +186,7 @@ class MyApp(QMainWindow):
         self.df = pd.read_csv(fname[0], index_col = 0, encoding = 'cp949')
         self.df.index = range(len(self.df.index))
         self.df.dropna(axis = 'columns', how = 'all', inplace = True)
+        self.df.dropna(axis = 'rows', how = 'all', inplace = True)
         self.allergy_df = pd.DataFrame(index = range(self.df.shape[0]), columns = range(self.df.shape[1]), data = [])
         self.table.setColumnCount(self.df.shape[1])
         self.table.setRowCount(self.df.shape[0])

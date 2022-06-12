@@ -1,14 +1,9 @@
-/4번환아.csv
-/4번환아식재료.csv
-/4번환아영양량.csv
+/*.csv
 /icons
 /sandbox.py
 /test.csv
 /build
 /dist
 /__pycache__
-dietkit.exe.spec
-dietkit_manager.spec
-dietkit.spec
-test.exe.spec
-sample_error_diet.csv
+/*.spec
+/icon.ico
