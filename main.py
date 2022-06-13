@@ -1,13 +1,14 @@
 import sys
 import pandas as pd
 import os
-from PyQt5.QtWidgets import QApplication, QWidget, QDesktopWidget, QMainWindow, QAction, QTableWidget, QTableWidgetItem, QScrollArea, QGridLayout, QInputDialog, QMessageBox, QFileDialog, QDialog, QVBoxLayout, QHBoxLayout, QCheckBox, QDialogButtonBox, QPushButton, QProgressBar
+from PyQt5.QtWidgets import QApplication, QWidget, QDesktopWidget, QMainWindow, QAction, QTableWidget, QTableWidgetItem, QScrollArea, QGridLayout, QInputDialog, QMessageBox, QFileDialog, QDialog, QVBoxLayout, QDialogButtonBox, QProgressBar, QAbstractItemView
 from PyQt5.QtWidgets import qApp
 from PyQt5.QtGui import QIcon
 from PyQt5 import QtCore, QtGui
 import time
 
 from allergy_checker import *
+from advtable import *
 
 class MyApp(QMainWindow):
     df = pd.DataFrame()
@@ -17,8 +18,8 @@ class MyApp(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.initUI()
         self.initdata()
+        self.initUI()
 
     def initUI(self):
         screen = QDesktopWidget().availableGeometry()
@@ -28,10 +29,9 @@ class MyApp(QMainWindow):
         layout = QGridLayout(widget)
 
         self.table = QTableWidget()
-        #self.table.setEditTriggers(QAbstractItemView.DoubleClicked)
+        self.table.setEditTriggers(QAbstractItemView.DoubleClicked)
         scroll = QScrollArea()
         scroll.setWidget(self.table)
-        self.table.cellDoubleClicked.connect(self.modifyTable)
         self.table.cellClicked.connect(self.cellinfo)
         self.table.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
 
@@ -39,8 +39,12 @@ class MyApp(QMainWindow):
         ingredientContextAction = QAction('식재료 보기', self.table)
         nutritionContextAction.triggered.connect(self.cellnutrition)
         ingredientContextAction.triggered.connect(self.cellingredient)     
-        self.table.addAction(nutritionContextAction)        
-        self.table.addAction(ingredientContextAction)           
+        self.table.addAction(nutritionContextAction)    
+        self.table.addAction(ingredientContextAction)
+        self.delegater = ComboDelegate()
+        self.delegater.setItems(self.menu_items)
+        self.delegater.closeEditor.connect(self.updateTable)
+        self.table.setItemDelegate(self.delegater)         
 
         layout.addWidget(self.table, 0, 0)
 
@@ -73,7 +77,7 @@ class MyApp(QMainWindow):
         menuloadAction.triggered.connect(self.loadmenu)
         menunutritionAction = QAction('메뉴 DB 영양량 계산')
         menunutritionAction.setStatusTip('메뉴 DB의 영양량을 계산합니다.')
-        menunutritionAction.triggered.connect(self.dummyfunc)
+        menunutritionAction.triggered.connect(self.message_popup)
 
         menubar = self.menuBar()
         menubar.setNativeMenuBar(False)
@@ -112,36 +116,19 @@ class MyApp(QMainWindow):
         qApp.processEvents()
         if os.path.exists('data/ingredients.csv'):
             self.ingredients = pd.read_csv('data/ingredients.csv', encoding = 'cp949', index_col = 0)
-            #self.ing_dropdown = QComboBox(self)
-            #self.ing_dropdown.addItems(self.ingredients.index.tolist())
-            #self.ing_dropdown.setEditable(True)
         else:
-            a = QMessageBox()
-            a.setText('기본 식재료 DB를 불러오지 못했습니다.\n데이터 메뉴에서 수동으로 불러와주십시오.')
-            a.setStandardButtons(QMessageBox.Ok)
-            a.exec_()
+            self.message_popup('기본 식재료 DB를 불러오지 못했습니다.\n데이터 메뉴에서 수동으로 불러와주십시오.')
         if os.path.exists('data/menus.csv'):
             temp = pd.read_csv('data/menus.csv', encoding = 'cp949', index_col = None)
             self.menus = pd.DataFrame(data = temp['weight'].values, index = pd.MultiIndex.from_frame(temp.fillna(method = 'ffill')[['name', 'ingredient']]), columns = ['weight'])
+            self.menu_items = sorted(self.menus.index.get_level_values(0).drop_duplicates().tolist())
             del temp
-            #self.menu_dropdown = QComboBox(self)
-            #self.menu_dropdown.addItems(self.menus.index.get_level_values(0).drop_duplicates().tolist())
-            #self.menu_dropdown.setEditable(True)
         else:
-            a = QMessageBox()
-            a.setText('기본 메뉴 DB를 불러오지 못했습니다.\n데이터 메뉴에서 수동으로 불러와주십시오.')
-            a.setStandardButtons(QMessageBox.Ok)
-            a.exec_()
+            self.message_popup('기본 메뉴 DB를 불러오지 못했습니다.\n데이터 메뉴에서 수동으로 불러와주십시오.')
         if os.path.exists('data/allergy.csv'):
             self.allergy = pd.read_csv('data/allergy.csv', encoding = 'cp949', index_col = 0).astype(bool)
-            #self.allergy_dropdown = QComboBox(self)
-            #self.allergy_dropdown.addItems(self.allergy.index.get_level_values(0).drop_duplicates().tolist())
-            #self.allergy_dropdown.setEditable(True)
         else:
-            a = QMessageBox()
-            a.setText('기본 알러지 DB를 불러오지 못했습니다.\n데이터 메뉴에서 수동으로 불러와주십시오.')
-            a.setStandardButtons(QMessageBox.Ok)
-            a.exec_()
+            self.message_popup('기본 알러지 DB를 불러오지 못했습니다.\n데이터 메뉴에서 수동으로 불러와주십시오.')
         if os.path.exists('data/ingredients.csv') and os.path.exists('data/menus.csv'):
             self.nutrition = pd.DataFrame(index = self.menus.index.get_level_values(0).drop_duplicates().tolist(), columns = self.ingredients.columns, data = 0)
             num_menu = len(self.nutrition.index)
@@ -163,7 +150,7 @@ class MyApp(QMainWindow):
 
     def initTable(self):
         row, dummy = QInputDialog.getInt(self, '식단표 생성', '행의 갯수')
-        col, dummy = QInputDialog.getInt(self, '식단표 생성', '열의 갯수')  
+        col, dummy = QInputDialog.getInt(self, '식단표 생성', '열의 갯수')
         self.table.setColumnCount(col)
         self.table.setRowCount(row)
         self.df = pd.DataFrame(index = range(row), columns = range(col), data = 'empty')
@@ -172,8 +159,7 @@ class MyApp(QMainWindow):
         self.statusBar().showMessage('식단표 생성이 완료되었습니다. 편집을 원하는 칸을 더블클릭하면 메뉴를 삽입할 수 있습니다.')
 
     def modifyTable(self, row, column):
-        combo_items = sorted(self.menus.index.get_level_values(0).drop_duplicates().tolist())
-        content, dummy = QInputDialog.getItem(self, "메뉴 선택", "선택한 칸에 들어갈 메뉴를 선택하세요.\n힌트: 메뉴명의 앞부분을 치고 →키를 누르면 일치하는 메뉴를 바로 찾을 수 있습니다.", combo_items, current = combo_items.index(self.df.iloc[row, column]), editable = True)
+        content, dummy = QInputDialog.getItem(self, "메뉴 선택", "선택한 칸에 들어갈 메뉴를 선택하세요.\n힌트: 메뉴명의 앞부분을 치고 →키를 누르면 일치하는 메뉴를 바로 찾을 수 있습니다.", self.menu_items, current = self.menu_items.index(self.df.iloc[row, column]), editable = True)
         self.df.iloc[row, column] = content
         self.allergy_df.iloc[row, column] = []
         self.table.setItem(row, column, QTableWidgetItem(content))
@@ -198,6 +184,9 @@ class MyApp(QMainWindow):
         if fname[0] != '':
             self.df.to_csv(fname[0], index = True, encoding = 'cp949')
 
+    def updateTable(self):
+        self.df.iloc[self.table.selectedIndexes()[0].row(), self.table.selectedIndexes()[0].column()] = self.table.item(self.table.selectedIndexes()[0].row(), self.table.selectedIndexes()[0].column()).text()
+
     def cellinfo(self, row, column):
         message = ''
         if self.allergy_checked and len(self.allergy_df.iloc[row, column]) > 0:
@@ -210,11 +199,7 @@ class MyApp(QMainWindow):
             menu_name = self.df.iloc[self.table.selectedIndexes()[0].row(), self.table.selectedIndexes()[0].column()]
             nutrition_info = self.nutrition.loc[menu_name]
         except KeyError:
-            a = QMessageBox()
-            a.resize(500,200)
-            a.setText('선택한 메뉴의 정보를 불러올 수 없습니다.\nDB 상에 존재하지 않는 메뉴일 수 있습니다.')
-            a.setStandardButtons(QMessageBox.Ok)
-            a.exec_()
+            self.message_popup('선택한 메뉴의 정보를 불러올 수 없습니다.\nDB 상에 존재하지 않는 메뉴일 수 있습니다.')
             return
         a = QDialog()
         a.resize(550, 800)
@@ -245,11 +230,7 @@ class MyApp(QMainWindow):
             menu_name = self.df.iloc[self.table.selectedIndexes()[0].row(), self.table.selectedIndexes()[0].column()]
             ing_info = self.menus.xs(menu_name).iloc[:,0].to_dict().items()
         except KeyError:
-            a = QMessageBox()
-            a.resize(500,200)
-            a.setText('선택한 메뉴의 정보를 불러올 수 없습니다.\nDB 상에 존재하지 않는 메뉴일 수 있습니다.')
-            a.setStandardButtons(QMessageBox.Ok)
-            a.exec_()
+            self.message_popup('선택한 메뉴의 정보를 불러올 수 없습니다.\nDB 상에 존재하지 않는 메뉴일 수 있습니다.')
             return
         a = QDialog()
         a.resize(550, 800)
@@ -324,10 +305,7 @@ class MyApp(QMainWindow):
                 continue
         if error_rows:
             nutrition_df.drop(error_rows, axis = 'index', inplace = True)
-            a = QMessageBox()
-            a.setText('일부 식단에서 영양량 계산에 실패했습니다.\n에러가 발생한 메뉴가 노랗게 채색되었습니다.')
-            a.setStandardButtons(QMessageBox.Ok)
-            a.exec_()
+            self.message_popup('일부 식단에서 영양량 계산에 실패했습니다.\n에러가 발생한 메뉴가 노랗게 채색되었습니다.')
         fname = QFileDialog.getSaveFileName(self, '영양량 리스트의 저장 위치', './', filter = '*.csv')
         if fname[0] != '':
             try:
@@ -335,10 +313,7 @@ class MyApp(QMainWindow):
             except PermissionError:
                 #alternative_name = time.strftime('%Y-%m-%d-%I-%M-%S', time.localtime(time())) + '.csv'
                 #ingredient_df.to_csv(alternative_name, index = True, encoding = 'cp949')
-                a = QMessageBox()
-                a.setText('주어진 이름으로 파일을 저장하는데 실패했습니다.\n해당 파일이 열려있을 수 있습니다.')
-                a.setStandardButtons(QMessageBox.Ok)
-                a.exec_()
+                self.message_popup('주어진 이름으로 파일을 저장하는데 실패했습니다.\n해당 파일이 열려있을 수 있습니다.')
 
     def checkingredient(self):
         ingredient_df = pd.DataFrame(columns=['식단번호', '메뉴일련번호', '메뉴', '식재료', '함량(g)'])
@@ -354,10 +329,7 @@ class MyApp(QMainWindow):
                     error_rows.append((row, col))
                     continue
         if error_rows:
-            a = QMessageBox()
-            a.setText('일부 식단에서 식재료 계산에 실패했습니다.\n에러가 발생한 메뉴가 노랗게 채색되었습니다.')
-            a.setStandardButtons(QMessageBox.Ok)
-            a.exec_()
+            self.message_popup('일부 식단에서 식재료 계산에 실패했습니다.\n에러가 발생한 메뉴가 노랗게 채색되었습니다.')
         fname = QFileDialog.getSaveFileName(self, '식재료 리스트의 저장 위치', './', filter = '*.csv')
         if fname[0] != '':
             try:
@@ -365,14 +337,11 @@ class MyApp(QMainWindow):
             except PermissionError:
                 #alternative_name = time.strftime('%Y-%m-%d-%I-%M-%S', time.localtime(time())) + '.csv'
                 #ingredient_df.to_csv(alternative_name, index = True, encoding = 'cp949')
-                a = QMessageBox()
-                a.setText('주어진 이름으로 파일을 저장하는데 실패했습니다.\n해당 파일이 열려있을 수 있습니다.')
-                a.setStandardButtons(QMessageBox.Ok)
-                a.exec_()
+                self.message_popup('주어진 이름으로 파일을 저장하는데 실패했습니다.\n해당 파일이 열려있을 수 있습니다.')
 
-    def dummyfunc(self):
+    def message_popup(self, message = '미구현'):
         a = QMessageBox()
-        a.setText('미구현')
+        a.setText(message)
         a.setStandardButtons(QMessageBox.Ok)
         a.exec_()
 
