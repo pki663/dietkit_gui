@@ -10,7 +10,6 @@ import json
 
 from allergy_checker import *
 from advtable import *
-from settings import *
 
 class MyApp(QMainWindow):
     df = pd.DataFrame()
@@ -165,7 +164,6 @@ class MyApp(QMainWindow):
         self.setTable()
         self.statusBar().showMessage('식단표 생성이 완료되었습니다. 편집을 원하는 칸을 더블클릭하면 메뉴를 삽입할 수 있습니다.')
 
-    def modifyTable(self, row, column):
         content, dummy = QInputDialog.getItem(self, "메뉴 선택", "선택한 칸에 들어갈 메뉴를 선택하세요.\n힌트: 메뉴명의 앞부분을 치고 →키를 누르면 일치하는 메뉴를 바로 찾을 수 있습니다.", self.menu_items, current = self.menu_items.index(self.df.iloc[row, column]), editable = True)
         self.df.iloc[row, column] = content
         self.allergy_df.iloc[row, column] = []
