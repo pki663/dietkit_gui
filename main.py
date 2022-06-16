@@ -1,14 +1,16 @@
 import sys
 import pandas as pd
 import os
-from PyQt5.QtWidgets import QApplication, QWidget, QDesktopWidget, QMainWindow, QAction, QTableWidget, QTableWidgetItem, QScrollArea, QGridLayout, QInputDialog, QMessageBox, QFileDialog, QDialog, QVBoxLayout, QDialogButtonBox, QProgressBar, QAbstractItemView
+from PyQt5.QtWidgets import QApplication, QWidget, QDesktopWidget, QMainWindow, QAction, QTableWidget, QTableWidgetItem, QScrollArea, QGridLayout, QInputDialog, QMessageBox, QFileDialog, QDialog, QVBoxLayout, QDialogButtonBox, QProgressBar, QAbstractItemView, QHeaderView
 from PyQt5.QtWidgets import qApp
 from PyQt5.QtGui import QIcon
 from PyQt5 import QtCore, QtGui
 import time
+import json
 
 from allergy_checker import *
 from advtable import *
+from settings import *
 
 class MyApp(QMainWindow):
     df = pd.DataFrame()
@@ -48,6 +50,9 @@ class MyApp(QMainWindow):
 
         layout.addWidget(self.table, 0, 0)
 
+        settingsAction = QAction('설정', self)
+        settingsAction.setStatusTip('프로그램 설정을 변경합니다.')
+        settingsAction.triggered.connect(self.settings)
         exitAction = QAction('종료', self)
         exitAction.setStatusTip('프로그램을 종료합니다.')
         exitAction.triggered.connect(qApp.quit)
@@ -86,6 +91,7 @@ class MyApp(QMainWindow):
         checkmenu = menubar.addMenu('검사')
         datamenu = menubar.addMenu('데이터')
 
+        mainmenu.addAction(settingsAction)
         mainmenu.addAction(exitAction)
         filemenu.addAction(newAction)
         filemenu.addAction(saveAction)
@@ -142,11 +148,12 @@ class MyApp(QMainWindow):
         loading_screen.close()
 
     def setTable(self):
-        for i in range(len(self.df.index)):
-            for j in range(len(self.df.columns)):
+        for j in range(len(self.df.columns)):
+            for i in range(len(self.df.index)):
                 self.table.setItem(i,j,QTableWidgetItem(str(self.df.iloc[i, j])))
                 self.table.item(i, j).setBackground(QtGui.QColor(255,255,255))
                 #self.table.setCellWidget(i,j,self.menu_dropdown)
+            self.table.horizontalHeader().setSectionResizeMode(j, QHeaderView.ResizeToContents)
 
     def initTable(self):
         row, dummy = QInputDialog.getInt(self, '식단표 생성', '행의 갯수')
@@ -278,6 +285,7 @@ class MyApp(QMainWindow):
         if len(checklist) == 0:
             return
         self.allergy_df = pd.DataFrame(index = self.df.index, columns = self.df.columns, data = '')
+        self.setTable()
         for row in range(self.df.shape[0]):
             for col in range(self.df.shape[1]):
                 try:
@@ -338,6 +346,9 @@ class MyApp(QMainWindow):
                 #alternative_name = time.strftime('%Y-%m-%d-%I-%M-%S', time.localtime(time())) + '.csv'
                 #ingredient_df.to_csv(alternative_name, index = True, encoding = 'cp949')
                 self.message_popup('주어진 이름으로 파일을 저장하는데 실패했습니다.\n해당 파일이 열려있을 수 있습니다.')
+
+    def settings(self):
+        pass
 
     def message_popup(self, message = '미구현'):
         a = QMessageBox()

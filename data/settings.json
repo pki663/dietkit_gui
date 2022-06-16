@@ -1,0 +1,13 @@
+{
+  "realtime_nutrition": false,
+  "row_nutrition_button": false,
+  "log_enable": false,
+  "log_path": "./log.csv",
+  "data_path": {
+    "ingredients": "./data/ingredients.csv",
+    "menus": "./data/menus.csv",
+    "nutritions": null,
+    "allergy": "./data/allergy.csv"
+  },
+  "nutrition_criteria": {}
+}
