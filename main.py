@@ -16,9 +16,11 @@ class MyApp(QMainWindow):
     allergy_df = pd.DataFrame()
     allergy_checked = False
     nutrition_checked = False
-
+    log_df = pd.DataFrame(columns = ['일시', 'Before', 'After'])
     def __init__(self):
         super().__init__()
+        with open('./data/settings.json', 'r') as f:
+            self.setting_data = json.load(f)
         self.initdata()
         self.initUI()
 
@@ -111,7 +113,7 @@ class MyApp(QMainWindow):
     def initdata(self):
         loading_screen = QDialog()
         loading_screen.resize(550, 75)
-        loading_screen.setWindowTitle('시작중')
+        loading_screen.setWindowTitle('데이터 불러오는중')
         vbox = QVBoxLayout()
         loading_bar = QProgressBar(loading_screen)
         vbox.addWidget(loading_bar)
@@ -199,6 +201,10 @@ class MyApp(QMainWindow):
             self.df.to_csv(fname[0], index = True, encoding = 'cp949')
 
     def updateTable(self):
+        before = self.df.iloc[self.table.selectedIndexes()[0].row(), self.table.selectedIndexes()[0].column()]
+        after = self.table.item(self.table.selectedIndexes()[0].row(), self.table.selectedIndexes()[0].column()).text()
+        if self.setting_data['log_enable'] and (before != after):
+            self.log_df.loc[len(self.log_df)] = [time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime(time.time())), before, after]
         self.df.iloc[self.table.selectedIndexes()[0].row(), self.table.selectedIndexes()[0].column()] = self.table.item(self.table.selectedIndexes()[0].row(), self.table.selectedIndexes()[0].column()).text()
 
     def cellinfo(self, row, column):
@@ -398,4 +404,7 @@ class MyApp(QMainWindow):
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     ex = MyApp()
-    sys.exit(app.exec_())
+    app.exec_()
+    if ex.setting_data['log_enable']:
+        ex.log_df.to_csv(ex.setting_data['log_path'] + 'log_' + time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime(time.time())) + '.csv', index = False, encoding = 'cp949')
+    sys.exit()
