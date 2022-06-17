@@ -303,6 +303,12 @@ class MyApp(QMainWindow):
         for idx in nutrition_sum.index:
             nutrition_table.setItem(count, 0, QTableWidgetItem(str(idx)))
             nutrition_table.setItem(count, 1, QTableWidgetItem(str(nutrition_sum.loc[idx])))
+            if self.setting_data['criteria'][idx][0]:
+               if nutrition_sum.loc[idx] < self.setting_data['criteria'][idx][0]:
+                nutrition_table.item(count, 1).setBackground(QtGui.QColor(255,169,140))
+            if self.setting_data['criteria'][idx][1]:
+               if nutrition_sum.loc[idx] > self.setting_data['criteria'][idx][1]:
+                nutrition_table.item(count, 1).setBackground(QtGui.QColor(255,169,140))
             count += 1
         okbutton = QDialogButtonBox()
         okbutton.setOrientation(QtCore.Qt.Horizontal)
