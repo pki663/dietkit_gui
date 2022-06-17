@@ -66,10 +66,24 @@ class SettingWindow(QDialog):
         hbox_allergy_path = QHBoxLayout()
         allergy_path = QLabel(self.setting_data['paths']['allergy'])
         hbox_allergy_path.addWidget(allergy_path)
-        allergy_change = QPushButton('메뉴 DB 변경', self)
+        allergy_change = QPushButton('알러지 DB 변경', self)
         allergy_change.clicked.connect(lambda: self.changeFile('allergy', allergy_path))
         hbox_allergy_path.addWidget(allergy_change)
         data_vbox.addLayout(hbox_allergy_path)
+
+        data_vbox.addWidget(QLabel('고급기능: 영양 데이터 저장하기\n영양 데이터를 따로 저장하여 시작시 로딩을 단축시키나, 오류가 발생할 수 있습니다.\n오류가 발생한다면 이 기능을 비활성화 하십시오.'))
+        self.nut_cbox = QCheckBox('영양 데이터 저장 활성화')
+        if self.setting_data['nutsave_enable']:
+            self.nut_cbox.toggle()
+        data_vbox.addWidget(self.nut_cbox)
+
+        hbox_nutrition_path = QHBoxLayout()
+        nutrition_path = QLabel(self.setting_data['paths']['nutritions'])
+        hbox_nutrition_path.addWidget(nutrition_path)
+        nutrition_change = QPushButton('영양 데이터 위치 변경', self)
+        nutrition_change.clicked.connect(lambda: self.changeFileSave('nutritions', nutrition_path))
+        hbox_nutrition_path.addWidget(nutrition_change)
+        data_vbox.addLayout(hbox_nutrition_path)
 
         data_tab.setLayout(data_vbox)
 
@@ -93,13 +107,19 @@ class SettingWindow(QDialog):
         self.exec_()
     
     def changePath(self, variable, label_obj):
-        dirname = QFileDialog.getExistingDirectory(self, '저장 위치', './')
+        dirname = QFileDialog.getExistingDirectory(self, '경로 위치', './')
         if dirname:
             self.setting_data['paths'][variable] = os.path.relpath(dirname)
             label_obj.setText(os.path.relpath(dirname))
 
     def changeFile(self, variable, label_obj):
-        fname = QFileDialog.getOpenFileName(self, '저장 위치', './', filter = '*.csv')
+        fname = QFileDialog.getOpenFileName(self, '데이터 위치', './', filter = '*.csv')
+        if fname[0]:
+            self.setting_data['paths'][variable] = os.path.relpath(fname[0])
+            label_obj.setText(os.path.relpath(fname[0]))
+    
+    def changeFileSave(self, variable, label_obj):
+        fname = QFileDialog.getSaveFileName(self, '데이터 위치', './', filter = '*.csv')
         if fname[0]:
             self.setting_data['paths'][variable] = os.path.relpath(fname[0])
             label_obj.setText(os.path.relpath(fname[0]))
@@ -124,6 +144,7 @@ class SettingWindow(QDialog):
 
     def applySetting(self):
         self.setting_data['log_enable'] = True if self.log_cbox.isChecked() else False
+        self.setting_data['nutsave_enable'] = True if self.nut_cbox.isChecked() else False
         for row in range(self.crit_df.rowCount()):
             self.setting_data['criteria'][self.crit_df.verticalHeaderItem(row).text()] = [float(self.crit_df.item(row, 0).text()) if self.crit_df.item(row, 0) else None, float(self.crit_df.item(row, 1).text()) if self.crit_df.item(row, 1) else None]
         with open('./data/settings.json', 'w') as f:

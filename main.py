@@ -125,21 +125,21 @@ class MyApp(QMainWindow):
         if os.path.exists(self.setting_data['paths']['ingredients']):
             self.ingredients = pd.read_csv(self.setting_data['paths']['ingredients'], encoding = 'cp949', index_col = 0)
         else:
-            self.message_popup('기본 식재료 DB를 불러오지 못했습니다.\n데이터 메뉴에서 수동으로 불러와주십시오.')
+            self.message_popup('기본 식재료 DB를 불러오지 못했습니다.\n데이터 설정을 확인 후 재시작해주십시오.')
         if os.path.exists(self.setting_data['paths']['menus']):
             temp = pd.read_csv(self.setting_data['paths']['menus'], encoding = 'cp949', index_col = None)
             self.menus = pd.DataFrame(data = temp['weight'].values, index = pd.MultiIndex.from_frame(temp.fillna(method = 'ffill')[['name', 'ingredient']]), columns = ['weight'])
             self.menu_items = sorted(self.menus.index.get_level_values(0).drop_duplicates().tolist())
             del temp
         else:
-            self.message_popup('기본 메뉴 DB를 불러오지 못했습니다.\n데이터 메뉴에서 수동으로 불러와주십시오.')
+            self.message_popup('기본 메뉴 DB를 불러오지 못했습니다.\n데이터 설정을 확인 후 재시작해주십시오.')
         if os.path.exists(self.setting_data['paths']['allergy']):
             self.allergy = pd.read_csv(self.setting_data['paths']['allergy'], encoding = 'cp949', index_col = 0).astype(bool)
         else:
-            self.message_popup('기본 알러지 DB를 불러오지 못했습니다.\n데이터 메뉴에서 수동으로 불러와주십시오.')
-        
-        '''
-        if os.path.exists(self.setting_data['paths']['ingredients']) and os.path.exists(self.setting_data['paths']['menus']):
+            self.message_popup('기본 알러지 DB를 불러오지 못했습니다.\n데이터 설정을 확인 후 재시작해주십시오.')
+        if self.setting_data['nutsave_enable'] and os.path.exists(self.setting_data['paths']['nutritions']):
+            self.nutrition = pd.read_csv(self.setting_data['paths']['nutritions'], encoding = 'cp949', index_col = 0)
+        elif os.path.exists(self.setting_data['paths']['ingredients']) and os.path.exists(self.setting_data['paths']['menus']):
             self.nutrition = pd.DataFrame(index = self.menus.index.get_level_values(0).drop_duplicates().tolist(), columns = self.ingredients.columns, data = 0)
             num_menu = len(self.nutrition.index)
             progressed = 0
@@ -149,7 +149,8 @@ class MyApp(QMainWindow):
                 progressed += 1
                 loading_bar.setValue(int(progressed / num_menu * 99))
                 qApp.processEvents()
-        '''
+            if self.setting_data['nutsave_enable']:
+                self.nutrition.to_csv(self.setting_data['paths']['nutritions'], encoding = 'cp949')
         loading_screen.close()
 
     def setTable(self):
