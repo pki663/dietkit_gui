@@ -1,7 +1,7 @@
 import sys
 import pandas as pd
 import os
-from PyQt5.QtWidgets import QApplication, QWidget, QDesktopWidget, QMainWindow, QAction, QTableWidget, QTableWidgetItem, QScrollArea, QGridLayout, QInputDialog, QMessageBox, QFileDialog, QDialog, QVBoxLayout, QDialogButtonBox, QProgressBar, QAbstractItemView, QHeaderView
+from PyQt5.QtWidgets import QApplication, QWidget, QDesktopWidget, QMainWindow, QAction, QTableWidget, QTableWidgetItem, QScrollArea, QGridLayout, QInputDialog, QMessageBox, QFileDialog, QDialog, QVBoxLayout, QDialogButtonBox, QProgressBar, QAbstractItemView, QHeaderView, QPushButton
 from PyQt5.QtWidgets import qApp
 from PyQt5.QtGui import QIcon
 from PyQt5 import QtCore, QtGui
@@ -153,6 +153,15 @@ class MyApp(QMainWindow):
                 self.table.item(i, j).setBackground(QtGui.QColor(255,255,255))
                 #self.table.setCellWidget(i,j,self.menu_dropdown)
             self.table.horizontalHeader().setSectionResizeMode(j, QHeaderView.ResizeToContents)
+        self.generateSumCol()
+
+    def generateSumCol(self):
+        last_col = len(self.df.columns)
+        self.table.setColumnCount(last_col + 1)
+        for row in range(len(self.df.index)):
+            btn = QPushButton('영양합')
+            btn.clicked.connect(self.rownutrition)
+            self.table.setCellWidget(row, last_col, btn)
 
     def initTable(self):
         row, dummy = QInputDialog.getInt(self, '식단표 생성', '행의 갯수')
@@ -251,6 +260,38 @@ class MyApp(QMainWindow):
         for k, v in ing_info:
             ingredient_table.setItem(count, 0, QTableWidgetItem(str(k)))
             ingredient_table.setItem(count, 1, QTableWidgetItem(str(v)))
+            count += 1
+        okbutton = QDialogButtonBox()
+        okbutton.setOrientation(QtCore.Qt.Horizontal)
+        okbutton.setStandardButtons(QDialogButtonBox.Ok)
+        okbutton.accepted.connect(a.close)
+        vbox.addWidget(okbutton, 0, QtCore.Qt.AlignHCenter)
+        a.setLayout(vbox)
+        a.show()
+        a.exec_()
+
+    def rownutrition(self):
+        row = self.table.indexAt(self.sender().pos()).row()
+        menu_list = self.df.loc[row].tolist()
+        try:
+            nutrition_sum = self.nutrition.loc[menu_list].sum(axis = 0)
+        except KeyError:
+            self.message_popup('유효하지 않은 메뉴가 있어 영양량 합을 계산하지 못했습니다.')
+            return
+        a = QDialog()
+        a.resize(550, 800)
+        a.setWindowTitle('row: ' + str(row+1) + ' 의 영양량')
+        vbox = QVBoxLayout()
+        nutrition_table = QTableWidget()
+        vbox.addWidget(nutrition_table)
+        nutrition_table.setColumnCount(2)
+        nutrition_table.setRowCount(len(self.nutrition.columns))
+        nutrition_table.verticalHeader().hide()
+        nutrition_table.setHorizontalHeaderLabels(['영양소', '함량'])
+        count = 0
+        for idx in nutrition_sum.index:
+            nutrition_table.setItem(count, 0, QTableWidgetItem(str(idx)))
+            nutrition_table.setItem(count, 1, QTableWidgetItem(str(nutrition_sum.loc[idx])))
             count += 1
         okbutton = QDialogButtonBox()
         okbutton.setOrientation(QtCore.Qt.Horizontal)
