@@ -1,13 +1,68 @@
 {
-  "realtime_nutrition": false,
-  "row_nutrition_button": false,
   "log_enable": false,
-  "log_path": "./log.csv",
-  "data_path": {
-    "ingredients": "./data/ingredients.csv",
-    "menus": "./data/menus.csv",
+  "paths": {
+    "log": ".",
+    "ingredients": "data\\ingredients.csv",
+    "menus": "data\\menus.csv",
     "nutritions": null,
-    "allergy": "./data/allergy.csv"
+    "allergy": "data\\allergy.csv"
   },
-  "nutrition_criteria": {}
+  "criteria": {
+    "Energy": [
+      1530.0,
+      1870.0
+    ],
+    "Protein": [
+      30.0,
+      null
+    ],
+    "Fat": [
+      null,
+      null
+    ],
+    "Carbohydrate": [
+      null,
+      null
+    ],
+    "Total Dietary": [
+      14.0,
+      25.0
+    ],
+    "Calcium": [
+      600.0,
+      2500.0
+    ],
+    "Iron": [
+      7.0,
+      40.0
+    ],
+    "Sodium": [
+      null,
+      1900.0
+    ],
+    "Vitamin A": [
+      310.0,
+      1100.0
+    ],
+    "Vitamin B1 (Thiamine)": [
+      0.5,
+      null
+    ],
+    "Vitamin B2 (Rivoflavin)": [
+      0.7,
+      null
+    ],
+    "Vitamin C": [
+      40.0,
+      750.0
+    ],
+    "Linoleic Acid": [
+      5608.0,
+      null
+    ],
+    "Alpha-Linolenic Acid": [
+      717.0,
+      null
+    ]
+  }
 }

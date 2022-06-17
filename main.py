@@ -9,7 +9,8 @@ import time
 import json
 
 from allergy_checker import *
-from advtable import *
+from advtable import ComboDelegate
+from settings import *
 
 class MyApp(QMainWindow):
     df = pd.DataFrame()
@@ -121,22 +122,24 @@ class MyApp(QMainWindow):
         loading_screen.show()
         loading_bar.setValue(0)
         qApp.processEvents()
-        if os.path.exists('data/ingredients.csv'):
-            self.ingredients = pd.read_csv('data/ingredients.csv', encoding = 'cp949', index_col = 0)
+        if os.path.exists(self.setting_data['paths']['ingredients']):
+            self.ingredients = pd.read_csv(self.setting_data['paths']['ingredients'], encoding = 'cp949', index_col = 0)
         else:
             self.message_popup('기본 식재료 DB를 불러오지 못했습니다.\n데이터 메뉴에서 수동으로 불러와주십시오.')
-        if os.path.exists('data/menus.csv'):
-            temp = pd.read_csv('data/menus.csv', encoding = 'cp949', index_col = None)
+        if os.path.exists(self.setting_data['paths']['menus']):
+            temp = pd.read_csv(self.setting_data['paths']['menus'], encoding = 'cp949', index_col = None)
             self.menus = pd.DataFrame(data = temp['weight'].values, index = pd.MultiIndex.from_frame(temp.fillna(method = 'ffill')[['name', 'ingredient']]), columns = ['weight'])
             self.menu_items = sorted(self.menus.index.get_level_values(0).drop_duplicates().tolist())
             del temp
         else:
             self.message_popup('기본 메뉴 DB를 불러오지 못했습니다.\n데이터 메뉴에서 수동으로 불러와주십시오.')
-        if os.path.exists('data/allergy.csv'):
-            self.allergy = pd.read_csv('data/allergy.csv', encoding = 'cp949', index_col = 0).astype(bool)
+        if os.path.exists(self.setting_data['paths']['allergy']):
+            self.allergy = pd.read_csv(self.setting_data['paths']['allergy'], encoding = 'cp949', index_col = 0).astype(bool)
         else:
             self.message_popup('기본 알러지 DB를 불러오지 못했습니다.\n데이터 메뉴에서 수동으로 불러와주십시오.')
-        if os.path.exists('data/ingredients.csv') and os.path.exists('data/menus.csv'):
+        
+        '''
+        if os.path.exists(self.setting_data['paths']['ingredients']) and os.path.exists(self.setting_data['paths']['menus']):
             self.nutrition = pd.DataFrame(index = self.menus.index.get_level_values(0).drop_duplicates().tolist(), columns = self.ingredients.columns, data = 0)
             num_menu = len(self.nutrition.index)
             progressed = 0
@@ -146,6 +149,7 @@ class MyApp(QMainWindow):
                 progressed += 1
                 loading_bar.setValue(int(progressed / num_menu * 99))
                 qApp.processEvents()
+        '''
         loading_screen.close()
 
     def setTable(self):
@@ -393,7 +397,12 @@ class MyApp(QMainWindow):
                 self.message_popup('주어진 이름으로 파일을 저장하는데 실패했습니다.\n해당 파일이 열려있을 수 있습니다.')
 
     def settings(self):
-        pass
+        setting = SettingWindow()
+        with open('./data/settings.json', 'r') as f:
+            new_setting = json.load(f)
+        if new_setting['paths'] != self.setting_data['paths']:
+            self.message_popup('데이터 설정이 변경되었습니다.\n적용을 위해서 프로그램을 재시작할 필요가 있습니다.')
+        self.setting_data = new_setting
 
     def message_popup(self, message = '미구현'):
         a = QMessageBox()
