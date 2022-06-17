@@ -9,6 +9,7 @@ class AllergyWindow(QDialog):
 
     def initUI(self):
         self.setWindowTitle('알러지 검사')
+        self.setWindowModality(QtCore.Qt.ApplicationModal)
         vbox = QVBoxLayout()
         hbox_1 = QHBoxLayout()
         self.cbox_1 = QCheckBox('난류')
