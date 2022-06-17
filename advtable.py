@@ -1,4 +1,5 @@
-from PyQt5.QtWidgets import QItemDelegate, QComboBox
+from PyQt5.QtWidgets import QItemDelegate, QComboBox, QCompleter
+from PyQt5.QtCore import Qt
 
 class ComboDelegate(QItemDelegate):
     def __init__(self, parent=None):
@@ -9,4 +10,8 @@ class ComboDelegate(QItemDelegate):
         editor = QComboBox(widget)
         editor.addItems(self.items)
         editor.setEditable(True)
+        completer = QCompleter(self.items)
+        completer.setCompletionMode(QCompleter.PopupCompletion)
+        completer.setFilterMode(Qt.MatchContains)
+        editor.setCompleter(completer)
         return editor
