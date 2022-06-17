@@ -8,5 +8,5 @@ class ComboDelegate(QItemDelegate):
     def createEditor(self, widget, option, index):
         editor = QComboBox(widget)
         editor.addItems(self.items)
-        editor.setEditable = True
+        editor.setEditable(True)
         return editor
