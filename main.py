@@ -145,6 +145,7 @@ class MyApp(QMainWindow):
         loading_screen.close()
 
     def setTable(self):
+        self.allergy_df = pd.DataFrame(index = range(self.df.shape[0]), columns = range(self.df.shape[1]), data = [])
         for j in range(len(self.df.columns)):
             for i in range(len(self.df.index)):
                 self.table.setItem(i,j,QTableWidgetItem(str(self.df.iloc[i, j])))
@@ -167,15 +168,8 @@ class MyApp(QMainWindow):
         self.table.setColumnCount(col)
         self.table.setRowCount(row)
         self.df = pd.DataFrame(index = range(row), columns = range(col), data = 'empty')
-        self.allergy_df = pd.DataFrame(index = range(row), columns = range(col), data = [])
         self.setTable()
         self.statusBar().showMessage('식단표 생성이 완료되었습니다. 편집을 원하는 칸을 더블클릭하면 메뉴를 삽입할 수 있습니다.')
-
-        content, dummy = QInputDialog.getItem(self, "메뉴 선택", "선택한 칸에 들어갈 메뉴를 선택하세요.\n힌트: 메뉴명의 앞부분을 치고 →키를 누르면 일치하는 메뉴를 바로 찾을 수 있습니다.", self.menu_items, current = self.menu_items.index(self.df.iloc[row, col]), editable = True)
-        self.df.iloc[row, col] = content
-        self.allergy_df.iloc[row, col] = []
-        self.table.setItem(row, col, QTableWidgetItem(content))
-        self.table.item(row, col).setBackground(QtGui.QColor(255,255,255))
 
     def loadTable(self):
         fname = QFileDialog.getOpenFileName(self, '식단표 위치', './', filter = '*.csv')
@@ -185,7 +179,6 @@ class MyApp(QMainWindow):
         self.df.index = range(len(self.df.index))
         self.df.dropna(axis = 'columns', how = 'all', inplace = True)
         self.df.dropna(axis = 'rows', how = 'all', inplace = True)
-        self.allergy_df = pd.DataFrame(index = range(self.df.shape[0]), columns = range(self.df.shape[1]), data = [])
         self.table.setColumnCount(self.df.shape[1])
         self.table.setRowCount(self.df.shape[0])
         self.setTable()
