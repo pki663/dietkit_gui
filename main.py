@@ -315,7 +315,7 @@ class MyApp(QMainWindow):
         a.exec_()
         
     def checkallergy(self):
-        win = AllergyWindow()
+        win = AllergyWindow(self.allergy.columns.tolist())
         checklist = win.checklist
         if len(checklist) == 0:
             return
