@@ -8,6 +8,7 @@
     "nutritions": "data\\nutritions.csv",
     "allergy": "data\\allergy.csv"
   },
+  "prev_allergy": [],
   "criteria": {
     "Energy": [
       1530.0,
