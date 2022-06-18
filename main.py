@@ -208,10 +208,14 @@ class MyApp(QMainWindow):
     def updateTable(self):
         before = self.df.iloc[self.table.selectedIndexes()[0].row(), self.table.selectedIndexes()[0].column()]
         after = self.table.item(self.table.selectedIndexes()[0].row(), self.table.selectedIndexes()[0].column()).text()
-        if self.setting_data['log_enable'] and (before != after):
+        if before == after:
+            return
+        if self.setting_data['log_enable']:
             self.log_df.loc[len(self.log_df)] = [time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime(time.time())), before, after]
         self.df.iloc[self.table.selectedIndexes()[0].row(), self.table.selectedIndexes()[0].column()] = self.table.item(self.table.selectedIndexes()[0].row(), self.table.selectedIndexes()[0].column()).text()
-
+        self.allergy_df.iloc[self.table.selectedIndexes()[0].row(), self.table.selectedIndexes()[0].column()] = []
+        self.table.item(self.table.selectedIndexes()[0].row(), self.table.selectedIndexes()[0].column()).setBackground(QtGui.QColor(255,255,255))
+        
     def cellinfo(self, row, column):
         message = ''
         if self.allergy_checked and len(self.allergy_df.iloc[row, column]) > 0:
