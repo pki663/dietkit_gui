@@ -151,7 +151,8 @@ class MyApp(QMainWindow):
                 self.table.setItem(i,j,QTableWidgetItem(str(self.df.iloc[i, j])))
                 self.table.item(i, j).setBackground(QtGui.QColor(255,255,255))
                 #self.table.setCellWidget(i,j,self.menu_dropdown)
-            self.table.horizontalHeader().setSectionResizeMode(j, QHeaderView.ResizeToContents)
+            self.table.horizontalHeader().setSectionResizeMode(j, QHeaderView.Interactive)
+            self.table.horizontalHeader().setMinimumSectionSize(300)
         self.generateSumCol()
 
     def generateSumCol(self):
