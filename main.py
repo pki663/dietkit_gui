@@ -76,22 +76,12 @@ class MyApp(QMainWindow):
         ingredientAction = QAction('식재료 분석', self)
         ingredientAction.setStatusTip('각 식단에 포함된 식재료들을 출력합니다.')
         ingredientAction.triggered.connect(self.checkingredient)
-        ingredientloadAction = QAction('식재료 DB 불러오기', self)
-        ingredientloadAction.setStatusTip('식재료 DB를 불러옵니다.')
-        ingredientloadAction.triggered.connect(self.loadingredient)
-        menuloadAction = QAction('메뉴 DB 불러오기', self)
-        menuloadAction.setStatusTip('메뉴 DB를 불러옵니다.')
-        menuloadAction.triggered.connect(self.loadmenu)
-        menunutritionAction = QAction('메뉴 DB 영양량 계산')
-        menunutritionAction.setStatusTip('메뉴 DB의 영양량을 계산합니다.')
-        menunutritionAction.triggered.connect(self.message_popup)
 
         menubar = self.menuBar()
         menubar.setNativeMenuBar(False)
         mainmenu = menubar.addMenu('메인')
         filemenu = menubar.addMenu('식단')
         checkmenu = menubar.addMenu('검사')
-        datamenu = menubar.addMenu('데이터')
 
         mainmenu.addAction(settingsAction)
         mainmenu.addAction(exitAction)
@@ -100,9 +90,7 @@ class MyApp(QMainWindow):
         filemenu.addAction(loadAction)
         checkmenu.addAction(allergyAction)
         checkmenu.addAction(nutritionAction)
-        checkmenu.addAction(ingredientAction)
-        datamenu.addAction(ingredientloadAction)                        
-        datamenu.addAction(menuloadAction)                
+        checkmenu.addAction(ingredientAction)           
 
         self.setWindowTitle('Dietkit')
         self.setWindowIcon(QIcon('icon.ico'))
@@ -143,12 +131,15 @@ class MyApp(QMainWindow):
             self.nutrition = pd.DataFrame(index = self.menus.index.get_level_values(0).drop_duplicates().tolist(), columns = self.ingredients.columns, data = 0)
             num_menu = len(self.nutrition.index)
             progressed = 0
-            for menu in self.nutrition.index:
-                for k, v in self.menus.xs(menu).iloc[:,0].to_dict().items():
-                    self.nutrition.loc[menu] += self.ingredients.loc[k] * v / 100
-                progressed += 1
-                loading_bar.setValue(int(progressed / num_menu * 99))
-                qApp.processEvents()
+            try:
+                for menu in self.nutrition.index:
+                    for k, v in self.menus.xs(menu).iloc[:,0].to_dict().items():
+                        self.nutrition.loc[menu] += self.ingredients.loc[k] * v / 100
+                    progressed += 1
+                    loading_bar.setValue(int(progressed / num_menu * 99))
+                    qApp.processEvents()
+            except KeyError:
+                self.message_popup('메뉴 DB의 영양량을 계산하던 중 오류가 발생했습니다.\n메뉴의 식재료 중 DB에 포함되지 않은 것이 있을 수 있습니다.')
             if self.setting_data['nutsave_enable']:
                 self.nutrition.to_csv(self.setting_data['paths']['nutritions'], encoding = 'cp949')
         loading_screen.close()
@@ -322,22 +313,6 @@ class MyApp(QMainWindow):
         a.setLayout(vbox)
         a.show()
         a.exec_()
-
-    def loadingredient(self):
-        fname = QFileDialog.getOpenFileName(self, '식재료 DB 위치', './', filter = '*.csv')
-        if fname[0] == '':
-            return
-        self.ingredients = pd.read_csv(fname[0], encoding = 'cp949', index_col = 0)
-        self.statusBar().showMessage('식재료 DB 불러오기가 완료되었습니다.')
-
-    def loadmenu(self):
-        fname = QFileDialog.getOpenFileName(self, '식재료 DB 위치', './', filter = '*.csv')
-        if fname[0] == '':
-            return
-        temp = pd.read_csv(fname[0], encoding = 'cp949', index_col = None)
-        self.menus = pd.DataFrame(data = temp['weight'].values, index = pd.MultiIndex.from_frame(temp.fillna(method = 'ffill')[['name', 'ingredient']]), columns = ['weight'])
-        del temp
-        self.statusBar().showMessage('메뉴 DB 불러오기가 완료되었습니다.')
         
     def checkallergy(self):
         win = AllergyWindow()
@@ -412,7 +387,10 @@ class MyApp(QMainWindow):
         with open('./data/settings.json', 'r') as f:
             new_setting = json.load(f)
         if new_setting['paths'] != self.setting_data['paths']:
-            self.message_popup('데이터 설정이 변경되었습니다.\n적용을 위해서 프로그램을 재시작할 필요가 있습니다.')
+            self.message_popup('데이터 설정이 변경되었습니다.\n적용을 위해서 데이터를 다시 로드합니다.')
+            self.initdata()
+            self.delegater.setItems(self.menu_items)
+            self.setTable()
         self.setting_data = new_setting
 
     def message_popup(self, message = '미구현'):
