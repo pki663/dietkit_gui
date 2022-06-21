@@ -398,5 +398,5 @@ if __name__ == '__main__':
     ex = MyApp()
     app.exec_()
     if ex.setting_data['log_enable']:
-        ex.log_df.to_csv(ex.setting_data['log_path'] + 'log_' + time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime(time.time())) + '.csv', index = False, encoding = 'cp949')
+        ex.log_df.to_csv(ex.setting_data['paths']['log'] + '/' + 'log_' + time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime(time.time())) + '.csv', index = False, encoding = 'cp949')
     sys.exit()
