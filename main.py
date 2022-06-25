@@ -153,15 +153,15 @@ class MyApp(QMainWindow):
                 #self.table.setCellWidget(i,j,self.menu_dropdown)
             self.table.horizontalHeader().setSectionResizeMode(j, QHeaderView.Interactive)
             self.table.horizontalHeader().setMinimumSectionSize(300)
-        self.generateSumCol()
+        self.generateSumIdx()
 
-    def generateSumCol(self):
-        last_col = len(self.df.columns)
-        self.table.setColumnCount(last_col + 1)
-        for row in range(len(self.df.index)):
+    def generateSumIdx(self):
+        last_idx = self.df.shape[0]
+        self.table.setRowCount(last_idx + 1)
+        for col in range(self.df.shape[1]):
             btn = QPushButton('영양합')
-            btn.clicked.connect(self.rownutrition)
-            self.table.setCellWidget(row, last_col, btn)
+            btn.clicked.connect(self.colnutrition)
+            self.table.setCellWidget(last_idx, col, btn)
 
     def initTable(self):
         row, dummy = QInputDialog.getInt(self, '식단표 생성', '행의 갯수')
@@ -270,9 +270,9 @@ class MyApp(QMainWindow):
         a.show()
         a.exec_()
 
-    def rownutrition(self):
-        row = self.table.indexAt(self.sender().pos()).row()
-        menu_list = self.df.loc[row].tolist()
+    def colnutrition(self):
+        col = self.table.indexAt(self.sender().pos()).column()
+        menu_list = self.df.iloc[:, col].tolist()
         try:
             nutrition_sum = self.nutrition.loc[menu_list].sum(axis = 0)
         except KeyError:
@@ -280,7 +280,7 @@ class MyApp(QMainWindow):
             return
         a = QDialog()
         a.resize(550, 800)
-        a.setWindowTitle('row: ' + str(row+1) + ' 의 영양량')
+        a.setWindowTitle('col: ' + str(col+1) + ' 의 영양량')
         vbox = QVBoxLayout()
         nutrition_table = QTableWidget()
         vbox.addWidget(nutrition_table)
@@ -330,18 +330,18 @@ class MyApp(QMainWindow):
         self.allergy_checked = True
 
     def checknutrition(self):
-        nutrition_df = pd.DataFrame(index = range(self.df.shape[0]), columns = self.ingredients.columns, data = 0.0)
-        error_rows = []
-        for row in range(self.df.shape[0]):
+        nutrition_df = pd.DataFrame(index = range(self.df.shape[1]), columns = self.ingredients.columns, data = 0.0)
+        error_cols = []
+        for col in range(self.df.shape[1]):
             try:
-                for col in range(self.df.shape[1]):
-                    nutrition_df.iloc[row] += self.nutrition.loc[self.df.iloc[row, col]]
+                for row in range(self.df.shape[0]):
+                    nutrition_df.iloc[col] += self.nutrition.loc[self.df.iloc[row, col]]
             except KeyError:
                 self.table.item(row, col).setBackground(QtGui.QColor(252,250,104))
-                error_rows.append(row)
+                error_cols.append(row)
                 continue
-        if error_rows:
-            nutrition_df.drop(error_rows, axis = 'index', inplace = True)
+        if error_cols:
+            nutrition_df.drop(error_cols, axis = 'index', inplace = True)
             self.message_popup('일부 식단에서 영양량 계산에 실패했습니다.\n에러가 발생한 메뉴가 노랗게 채색되었습니다.')
         fname = QFileDialog.getSaveFileName(self, '영양량 리스트의 저장 위치', './', filter = '*.csv')
         if fname[0] != '':
@@ -355,17 +355,17 @@ class MyApp(QMainWindow):
     def checkingredient(self):
         ingredient_df = pd.DataFrame(columns=['식단번호', '메뉴일련번호', '메뉴', '식재료', '함량(g)'])
         ingredient_df = ingredient_df.set_index(['식단번호', '메뉴일련번호', '메뉴', '식재료'])
-        error_rows = []
-        for row in range(self.df.shape[0]):
-            for col in range(self.df.shape[1]):
+        error_cols = []
+        for col in range(self.df.shape[1]):
+            for row in range(self.df.shape[0]):    
                 try:
                     for k, v in self.menus.xs(self.df.iloc[row, col]).iloc[:,0].to_dict().items():
-                        ingredient_df.loc[(row, col, self.df.iloc[row, col], k)] = v
+                        ingredient_df.loc[(col, row, self.df.iloc[row, col], k)] = v
                 except KeyError:
                     self.table.item(row, col).setBackground(QtGui.QColor(252,250,104))
-                    error_rows.append((row, col))
+                    error_cols.append(col)
                     continue
-        if error_rows:
+        if error_cols:
             self.message_popup('일부 식단에서 식재료 계산에 실패했습니다.\n에러가 발생한 메뉴가 노랗게 채색되었습니다.')
         fname = QFileDialog.getSaveFileName(self, '식재료 리스트의 저장 위치', './', filter = '*.csv')
         if fname[0] != '':
