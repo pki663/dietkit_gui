@@ -172,7 +172,7 @@ class MyApp(QMainWindow):
                 self.table.setItem(i,j,QTableWidgetItem(str(self.df.iloc[i, j])))
                 self.table.item(i, j).setBackground(QtGui.QColor(255,255,255))
                 #self.table.setCellWidget(i,j,self.menu_dropdown)
-            self.table.horizontalHeader().setSectionResizeMode(j, QHeaderView.Interactive)
+            self.table.horizontalHeader().setSectionResizeMode(j, QHeaderView.ResizeToContents)
             #self.table.horizontalHeader().setMinimumSectionSize(300)
         self.setnutTable()
         self.drawGraph()
@@ -184,6 +184,8 @@ class MyApp(QMainWindow):
         self.nuttable.setVerticalHeaderLabels(self.nutrition.columns.tolist())
         nut_error = False
         for col in range(len(self.df.columns)):
+            self.nuttable.horizontalHeader().setSectionResizeMode(col, QHeaderView.ResizeToContents)
+            self.nuttable.horizontalHeader().setMinimumSectionSize(75)
             menu_list = self.df.iloc[:, col].tolist()
             try:
                 nutrition_sum = self.nutrition.loc[menu_list].sum(axis = 0)
