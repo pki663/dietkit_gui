@@ -52,6 +52,12 @@ class MyApp(QMainWindow):
 
         layout.addWidget(self.table, 0, 0)
 
+        self.nuttable = QTableWidget()
+        scroll = QScrollArea()
+        scroll.setWidget(self.nuttable)
+
+        layout.addWidget(self.nuttable, 1, 0)
+
         settingsAction = QAction('설정', self)
         settingsAction.setStatusTip('프로그램 설정을 변경합니다.')
         settingsAction.triggered.connect(self.settings)
@@ -153,15 +159,31 @@ class MyApp(QMainWindow):
                 #self.table.setCellWidget(i,j,self.menu_dropdown)
             self.table.horizontalHeader().setSectionResizeMode(j, QHeaderView.Interactive)
             self.table.horizontalHeader().setMinimumSectionSize(300)
-        self.generateSumIdx()
-
-    def generateSumIdx(self):
-        last_idx = self.df.shape[0]
-        self.table.setRowCount(last_idx + 1)
-        for col in range(self.df.shape[1]):
-            btn = QPushButton('영양합')
-            btn.clicked.connect(self.colnutrition)
-            self.table.setCellWidget(last_idx, col, btn)
+        self.setnutTable()
+        
+    def setnutTable(self):
+        self.nuttable.setColumnCount(self.df.shape[1])
+        self.nuttable.setRowCount(len(self.nutrition.columns))
+        self.nuttable.setHorizontalHeaderLabels([str(i+1) for i in range(self.df.shape[1])])
+        self.nuttable.setVerticalHeaderLabels(self.nutrition.columns.tolist())
+        nut_error = False
+        for col in range(len(self.df.columns)):
+            menu_list = self.df.iloc[:, col].tolist()
+            try:
+                nutrition_sum = self.nutrition.loc[menu_list].sum(axis = 0)
+            except KeyError:
+                nut_error = True
+            
+            for idx in nutrition_sum.index:
+                self.nuttable.setItem(nutrition_sum.index.tolist().index(idx), col, QTableWidgetItem(str(nutrition_sum.loc[idx])))
+                if self.setting_data['criteria'][idx][0]:
+                    if nutrition_sum.loc[idx] < self.setting_data['criteria'][idx][0]:
+                        self.nuttable.item(nutrition_sum.index.tolist().index(idx), col).setBackground(QtGui.QColor(139,182,250))
+                if self.setting_data['criteria'][idx][1]:
+                    if nutrition_sum.loc[idx] > self.setting_data['criteria'][idx][1]:
+                        self.nuttable.item(nutrition_sum.index.tolist().index(idx), col).setBackground(QtGui.QColor(255,169,140))
+        if nut_error:
+            self.message_popup('일부 열에서 유효하지 않은 메뉴가 있어 영양량 합을 계산하지 못했습니다.')
 
     def initTable(self):
         row, dummy = QInputDialog.getInt(self, '식단표 생성', '행의 갯수')
@@ -170,6 +192,7 @@ class MyApp(QMainWindow):
         self.table.setRowCount(row)
         self.df = pd.DataFrame(index = range(row), columns = range(col), data = 'empty')
         self.setTable()
+        self.setnutTable()
         self.statusBar().showMessage('식단표 생성이 완료되었습니다. 편집을 원하는 칸을 더블클릭하면 메뉴를 삽입할 수 있습니다.')
 
     def loadTable(self):
@@ -200,6 +223,7 @@ class MyApp(QMainWindow):
         self.df.iloc[self.table.selectedIndexes()[0].row(), self.table.selectedIndexes()[0].column()] = self.table.item(self.table.selectedIndexes()[0].row(), self.table.selectedIndexes()[0].column()).text()
         self.allergy_df.iloc[self.table.selectedIndexes()[0].row(), self.table.selectedIndexes()[0].column()] = []
         self.table.item(self.table.selectedIndexes()[0].row(), self.table.selectedIndexes()[0].column()).setBackground(QtGui.QColor(255,255,255))
+        self.setnutTable()
         
     def cellinfo(self, row, column):
         message = ''
@@ -270,43 +294,6 @@ class MyApp(QMainWindow):
         a.show()
         a.exec_()
 
-    def colnutrition(self):
-        col = self.table.indexAt(self.sender().pos()).column()
-        menu_list = self.df.iloc[:, col].tolist()
-        try:
-            nutrition_sum = self.nutrition.loc[menu_list].sum(axis = 0)
-        except KeyError:
-            self.message_popup('유효하지 않은 메뉴가 있어 영양량 합을 계산하지 못했습니다.')
-            return
-        a = QDialog()
-        a.resize(550, 800)
-        a.setWindowTitle('col: ' + str(col+1) + ' 의 영양량')
-        vbox = QVBoxLayout()
-        nutrition_table = QTableWidget()
-        vbox.addWidget(nutrition_table)
-        nutrition_table.setColumnCount(2)
-        nutrition_table.setRowCount(len(self.nutrition.columns))
-        nutrition_table.verticalHeader().hide()
-        nutrition_table.setHorizontalHeaderLabels(['영양소', '함량'])
-        count = 0
-        for idx in nutrition_sum.index:
-            nutrition_table.setItem(count, 0, QTableWidgetItem(str(idx)))
-            nutrition_table.setItem(count, 1, QTableWidgetItem(str(nutrition_sum.loc[idx])))
-            if self.setting_data['criteria'][idx][0]:
-               if nutrition_sum.loc[idx] < self.setting_data['criteria'][idx][0]:
-                nutrition_table.item(count, 1).setBackground(QtGui.QColor(255,169,140))
-            if self.setting_data['criteria'][idx][1]:
-               if nutrition_sum.loc[idx] > self.setting_data['criteria'][idx][1]:
-                nutrition_table.item(count, 1).setBackground(QtGui.QColor(255,169,140))
-            count += 1
-        okbutton = QDialogButtonBox()
-        okbutton.setOrientation(QtCore.Qt.Horizontal)
-        okbutton.setStandardButtons(QDialogButtonBox.Ok)
-        okbutton.accepted.connect(a.close)
-        vbox.addWidget(okbutton, 0, QtCore.Qt.AlignHCenter)
-        a.setLayout(vbox)
-        a.show()
-        a.exec_()
         
     def checkallergy(self):
         win = AllergyWindow(self.allergy.columns.tolist())
