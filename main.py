@@ -1,10 +1,11 @@
 import sys
 import pandas as pd
 import os
-from PyQt5.QtWidgets import QApplication, QWidget, QDesktopWidget, QMainWindow, QAction, QTableWidget, QTableWidgetItem, QScrollArea, QGridLayout, QInputDialog, QMessageBox, QFileDialog, QDialog, QVBoxLayout, QDialogButtonBox, QProgressBar, QAbstractItemView, QHeaderView, QPushButton
+from PyQt5.QtWidgets import QApplication, QWidget, QDesktopWidget, QMainWindow, QAction, QTableWidget, QTableWidgetItem, QScrollArea, QGridLayout, QInputDialog, QMessageBox, QFileDialog, QDialog, QVBoxLayout, QDialogButtonBox, QProgressBar, QAbstractItemView, QHeaderView, QPushButton, QComboBox, QVBoxLayout
 from PyQt5.QtWidgets import qApp
 from PyQt5.QtGui import QIcon
-from PyQt5 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui, QtWebEngineWidgets
+import plotly.express as px
 import time
 import json
 
@@ -34,8 +35,8 @@ class MyApp(QMainWindow):
 
         self.table = QTableWidget()
         self.table.setEditTriggers(QAbstractItemView.DoubleClicked)
-        scroll = QScrollArea()
-        scroll.setWidget(self.table)
+        #scroll = QScrollArea()
+        #scroll.setWidget(self.table)
         self.table.cellClicked.connect(self.cellinfo)
         self.table.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
 
@@ -48,15 +49,28 @@ class MyApp(QMainWindow):
         self.delegater = ComboDelegate()
         self.delegater.setItems(self.menu_items)
         self.delegater.closeEditor.connect(self.updateTable)
-        self.table.setItemDelegate(self.delegater)         
+        self.table.setItemDelegate(self.delegater)     
 
         layout.addWidget(self.table, 0, 0)
-
         self.nuttable = QTableWidget()
-        scroll = QScrollArea()
-        scroll.setWidget(self.nuttable)
+        #scroll = QScrollArea()
+        #scroll.setWidget(self.nuttable)
 
         layout.addWidget(self.nuttable, 1, 0)
+        
+        graphbox = QVBoxLayout()
+        self.nutcombo = QComboBox()
+        self.nutcombo.currentTextChanged.connect(self.drawGraph)
+        self.nutcombo.addItems(self.nutrition.columns.tolist())
+        graphbox.addWidget(self.nutcombo)
+
+        self.graphwindow = QtWebEngineWidgets.QWebEngineView(self)
+        graphbox.addWidget(self.graphwindow)
+
+        layout.addLayout(graphbox, 0, 1, 2, 1)
+
+        layout.setColumnStretch(0, 3)
+        layout.setColumnStretch(1, 1)
 
         settingsAction = QAction('설정', self)
         settingsAction.setStatusTip('프로그램 설정을 변경합니다.')
@@ -148,6 +162,7 @@ class MyApp(QMainWindow):
                 self.message_popup('메뉴 DB의 영양량을 계산하던 중 오류가 발생했습니다.\n메뉴의 식재료 중 DB에 포함되지 않은 것이 있을 수 있습니다.')
             if self.setting_data['nutsave_enable']:
                 self.nutrition.to_csv(self.setting_data['paths']['nutritions'], encoding = 'cp949')
+        self.nutrition_df = pd.DataFrame(columns = self.nutrition.columns)
         loading_screen.close()
 
     def setTable(self):
@@ -158,8 +173,9 @@ class MyApp(QMainWindow):
                 self.table.item(i, j).setBackground(QtGui.QColor(255,255,255))
                 #self.table.setCellWidget(i,j,self.menu_dropdown)
             self.table.horizontalHeader().setSectionResizeMode(j, QHeaderView.Interactive)
-            self.table.horizontalHeader().setMinimumSectionSize(300)
+            #self.table.horizontalHeader().setMinimumSectionSize(300)
         self.setnutTable()
+        self.drawGraph()
         
     def setnutTable(self):
         self.nuttable.setColumnCount(self.df.shape[1])
@@ -171,11 +187,12 @@ class MyApp(QMainWindow):
             menu_list = self.df.iloc[:, col].tolist()
             try:
                 nutrition_sum = self.nutrition.loc[menu_list].sum(axis = 0)
+                self.nutrition_df.loc[col] = nutrition_sum
             except KeyError:
                 nut_error = True
             
             for idx in nutrition_sum.index:
-                self.nuttable.setItem(nutrition_sum.index.tolist().index(idx), col, QTableWidgetItem(str(nutrition_sum.loc[idx])))
+                self.nuttable.setItem(nutrition_sum.index.tolist().index(idx), col, QTableWidgetItem(str(nutrition_sum.loc[idx].round(3))))
                 if self.setting_data['criteria'][idx][0]:
                     if nutrition_sum.loc[idx] < self.setting_data['criteria'][idx][0]:
                         self.nuttable.item(nutrition_sum.index.tolist().index(idx), col).setBackground(QtGui.QColor(139,182,250))
@@ -193,6 +210,7 @@ class MyApp(QMainWindow):
         self.df = pd.DataFrame(index = range(row), columns = range(col), data = 'empty')
         self.setTable()
         self.setnutTable()
+        self.drawGraph()
         self.statusBar().showMessage('식단표 생성이 완료되었습니다. 편집을 원하는 칸을 더블클릭하면 메뉴를 삽입할 수 있습니다.')
 
     def loadTable(self):
@@ -224,6 +242,23 @@ class MyApp(QMainWindow):
         self.allergy_df.iloc[self.table.selectedIndexes()[0].row(), self.table.selectedIndexes()[0].column()] = []
         self.table.item(self.table.selectedIndexes()[0].row(), self.table.selectedIndexes()[0].column()).setBackground(QtGui.QColor(255,255,255))
         self.setnutTable()
+        self.drawGraph()
+    
+    def drawGraph(self, nutrition = 'Undefined'):
+        if self.df.shape[0] == 0:
+            return
+        if nutrition == 'Undefined':
+            nutrition = self.nutcombo.currentText()
+        fig = px.bar(y = [v+1 for v in range(self.df.shape[1])], x = self.nutrition_df[nutrition].tolist(), orientation = 'h')
+        fig.update_yaxes(title = 'Diet No.', range = [self.df.shape[1] + 0.5, 0.5])
+        fig.update_xaxes(title = nutrition)
+        fig.update_layout(showlegend=False)
+        fig.update_traces(marker_color = 'lightgreen')
+        if self.setting_data['criteria'][nutrition][0]:
+            fig.add_shape(type="line", line_color="blue", line_width=3, opacity=1, line_dash="dot", y0=-1, y1=self.df.shape[1] + 1, x0=self.setting_data['criteria'][nutrition][0], x1=self.setting_data['criteria'][nutrition][0])
+        if self.setting_data['criteria'][nutrition][1]:
+            fig.add_shape(type="line", line_color="red", line_width=3, opacity=1, line_dash="dot", y0=-1, y1=self.df.shape[1] + 1, x0=self.setting_data['criteria'][nutrition][1], x1=self.setting_data['criteria'][nutrition][1])
+        self.graphwindow.setHtml(fig.to_html(include_plotlyjs = 'cdn'))
         
     def cellinfo(self, row, column):
         message = ''
