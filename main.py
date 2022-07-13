@@ -53,6 +53,7 @@ class MyApp(QMainWindow):
 
         layout.addWidget(self.table, 0, 0)
         self.nuttable = QTableWidget()
+        self.nuttable.setEditTriggers(QAbstractItemView.NoEditTriggers)
         #scroll = QScrollArea()
         #scroll.setWidget(self.nuttable)
 
