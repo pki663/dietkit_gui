@@ -71,6 +71,8 @@ class MyApp(QMainWindow):
 
         layout.setColumnStretch(0, 3)
         layout.setColumnStretch(1, 1)
+        layout.setRowStretch(0,2)
+        layout.setRowStretch(1,1)
 
         settingsAction = QAction('설정', self)
         settingsAction.setStatusTip('프로그램 설정을 변경합니다.')
@@ -174,6 +176,8 @@ class MyApp(QMainWindow):
                 #self.table.setCellWidget(i,j,self.menu_dropdown)
             self.table.horizontalHeader().setSectionResizeMode(j, QHeaderView.ResizeToContents)
             #self.table.horizontalHeader().setMinimumSectionSize(300)
+        for i in range(len(self.df.index)):
+            self.table.verticalHeader().setSectionResizeMode(i, QHeaderView.ResizeToContents)
         self.setnutTable()
         self.drawGraph()
         
@@ -203,6 +207,8 @@ class MyApp(QMainWindow):
                         self.nuttable.item(nutrition_sum.index.tolist().index(idx), col).setBackground(QtGui.QColor(255,169,140))
         if nut_error:
             self.message_popup('일부 열에서 유효하지 않은 메뉴가 있어 영양량 합을 계산하지 못했습니다.')
+        for idx in range(len(self.nutrition.columns)):
+            self.nuttable.verticalHeader().setSectionResizeMode(idx, QHeaderView.ResizeToContents)
 
     def initTable(self):
         row, dummy = QInputDialog.getInt(self, '식단표 생성', '행의 갯수')
