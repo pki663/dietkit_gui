@@ -1,5 +1,5 @@
 {
-  "log_enable": true,
+  "log_enable": false,
   "nutsave_enable": true,
   "paths": {
     "log": ".",
@@ -8,10 +8,9 @@
     "nutritions": "data\\nutritions.csv",
     "allergy": "data\\allergy.csv"
   },
-  "prev_allergy": [
-    "\uc6b0\uc720",
-    "\ub3fc\uc9c0\uace0\uae30"
-  ],
+  "prev_allergy": [],
+  "allergy_preset": {
+  },
   "criteria": {
     "Energy": [
       1530.0,

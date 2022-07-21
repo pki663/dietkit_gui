@@ -1,6 +1,6 @@
+import os
 import sys
 import pandas as pd
-import os
 from PyQt5.QtWidgets import QApplication, QWidget, QDesktopWidget, QMainWindow, QAction, QTableWidget, QTableWidgetItem, QScrollArea, QGridLayout, QInputDialog, QMessageBox, QFileDialog, QDialog, QVBoxLayout, QDialogButtonBox, QProgressBar, QAbstractItemView, QHeaderView, QPushButton, QComboBox, QVBoxLayout
 from PyQt5.QtWidgets import qApp
 from PyQt5.QtGui import QIcon
@@ -340,7 +340,7 @@ class MyApp(QMainWindow):
 
         
     def checkallergy(self):
-        win = AllergyWindow(self.allergy.columns.tolist())
+        win = AllergyWindow(self.allergy.columns.tolist(), allow_preset = True)
         checklist = win.checklist
         if len(checklist) == 0:
             return
@@ -408,7 +408,7 @@ class MyApp(QMainWindow):
                 self.message_popup('주어진 이름으로 파일을 저장하는데 실패했습니다.\n해당 파일이 열려있을 수 있습니다.')
 
     def settings(self):
-        setting = SettingWindow()
+        setting = SettingWindow(self.allergy.columns.tolist())
         with open('./data/settings.json', 'r') as f:
             new_setting = json.load(f)
         if new_setting['paths'] != self.setting_data['paths']:

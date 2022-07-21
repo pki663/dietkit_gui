@@ -1,12 +1,15 @@
-from PyQt5.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QCheckBox, QDialogButtonBox, QLabel, QPushButton, QWidget, QTabWidget, QFileDialog, QTableWidget, QTableWidgetItem
+from PyQt5.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QCheckBox, QDialogButtonBox, QLabel, QPushButton, QWidget, QTabWidget, QFileDialog, QTableWidget, QTableWidgetItem, QListWidget, QInputDialog, QMessageBox
 from PyQt5 import QtCore
 import json
 import os
 from advtable import NumericDelegate
 
+from allergy_checker import AllergyWindow
+
 class SettingWindow(QDialog):
     checklist = []
-    def __init__(self):
+    def __init__(self, allergy_header):
+        self.allergy_header = allergy_header
         with open('./data/settings.json', 'r') as f:
             self.setting_data = json.load(f)
         super().__init__()
@@ -19,10 +22,12 @@ class SettingWindow(QDialog):
         data_tab = QWidget()
         log_tab = QWidget()
         criteria_tab = QWidget()
+        allergy_tab = QWidget()
         tabs = QTabWidget()
         tabs.addTab(log_tab, '로그')
         tabs.addTab(data_tab, '데이터')
         tabs.addTab(criteria_tab, '영양기준')
+        tabs.addTab(allergy_tab, '알러지')
         main_vbox = QVBoxLayout()
         main_vbox.addWidget(tabs)     
 
@@ -94,6 +99,38 @@ class SettingWindow(QDialog):
         criteria_vbox.addWidget(self.crit_df)
         criteria_tab.setLayout(criteria_vbox)
 
+        # 알러지 탭 레이아웃
+        allergy_vbox = QVBoxLayout()
+        allergy_vbox.addWidget(QLabel('알러지 프리셋을 설정합니다.'))
+        allergy_labelbox = QHBoxLayout()
+        allergy_listbox = QHBoxLayout()
+        allergy_buttonbox = QHBoxLayout()
+
+        allergy_labelbox.addWidget(QLabel('프리셋 목록'))
+        allergy_labelbox.addWidget(QLabel('프리셋 구성'))
+        allergy_vbox.addLayout(allergy_labelbox)
+
+        self.preset_list = QListWidget()
+        self.preset_detail = QListWidget()
+        self.preset_list.addItems(self.setting_data['allergy_preset'].keys())
+        self.preset_list.currentItemChanged.connect(self.showPreset)
+        allergy_listbox.addWidget(self.preset_list)
+        allergy_listbox.addWidget(self.preset_detail)
+        allergy_vbox.addLayout(allergy_listbox)
+
+        add_button = QPushButton('프리셋 추가', self)
+        modify_button = QPushButton('프리셋 수정', self)
+        remove_button = QPushButton('프리셋 삭제', self)
+        allergy_buttonbox.addWidget(add_button)
+        allergy_buttonbox.addWidget(modify_button)
+        allergy_buttonbox.addWidget(remove_button)
+        add_button.clicked.connect(self.addPreset)
+        modify_button.clicked.connect(self.modifyPreset)
+        remove_button.clicked.connect(self.removePreset)
+
+        allergy_vbox.addLayout(allergy_buttonbox)
+        allergy_tab.setLayout(allergy_vbox)
+
         # 메인 레이아웃 마무리
         self.buttonBox = QDialogButtonBox()
         self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
@@ -141,6 +178,39 @@ class SettingWindow(QDialog):
                 if v[1]:
                     criteria_table.setItem(nut_header.index(k), 1, QTableWidgetItem(str(v[1])))
         return criteria_table
+
+    def addPreset(self):
+        preset_name, ok = QInputDialog.getText(self, '프리셋 추가', '프리셋의 이름을 입력해 주십시오')
+        if preset_name in self.setting_data['allergy_preset'].keys():
+            a = QMessageBox()
+            a.setText('이미 존재하는 프리셋 이름입니다.')
+            a.setStandardButtons(QMessageBox.Ok)
+            a.exec_()
+            return
+        self.preset_list.addItem(preset_name)
+        self.setting_data['allergy_preset'][preset_name] = []
+        self.modifyPreset(preset_name)
+
+    def modifyPreset(self, preset = None):
+        if not preset:
+            preset = self.preset_list.currentItem().text()
+        input_allergy = AllergyWindow(self.allergy_header)
+        self.setting_data['allergy_preset'][preset] = input_allergy.checklist
+        self.preset_list.setCurrentRow(self.preset_list.count() - 1)
+        self.showPreset()
+
+    def showPreset(self):
+        self.preset_detail.clear()
+        if self.preset_list.currentItem() is not None:
+            self.preset_detail.addItems(self.setting_data['allergy_preset'][self.preset_list.currentItem().text()])
+        
+    def removePreset(self):
+        if self.preset_list.currentItem() is None:
+            return
+        del self.setting_data['allergy_preset'][self.preset_list.currentItem().text()]
+        self.preset_list.takeItem(self.preset_list.currentRow())
+        self.preset_list.setCurrentRow(self.preset_list.currentRow() - 1)
+        self.showPreset()
 
     def applySetting(self):
         self.setting_data['log_enable'] = True if self.log_cbox.isChecked() else False
