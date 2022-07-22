@@ -41,7 +41,7 @@ class AllergyWindow(QDialog):
             for preset in self.setting_data["allergy_preset"].keys():
                 self.preset_cboxs[preset] = QCheckBox(preset)
                 preset_grid.addWidget(self.preset_cboxs[preset], divmod(temp_idx, col_count)[0], temp_idx % col_count)
-                self.preset_cboxs[preset].toggled.connect(lambda: self.preset_checked(preset))
+                self.preset_cboxs[preset].toggled.connect(lambda: self.preset_checked())
                 temp_idx += 1
             vbox.addLayout(preset_grid)
             hline = QFrame()
@@ -60,15 +60,16 @@ class AllergyWindow(QDialog):
         self.show()
         self.exec_()
 
-    def preset_checked(self, preset):
-        if self.preset_cboxs[preset].isChecked():
-            for allergen in self.setting_data["allergy_preset"][preset]:
-                self.cboxs[allergen].setCheckState(2)
-                self.cboxs[allergen].setEnabled(False)
-        else:
-            for allergen in self.setting_data["allergy_preset"][preset]:
-                self.cboxs[allergen].setCheckState(0)
-                self.cboxs[allergen].setEnabled(True)
+    def preset_checked(self):
+        for preset in self.preset_cboxs.keys():
+            if self.preset_cboxs[preset].isChecked():
+                for allergen in self.setting_data["allergy_preset"][preset]:
+                    self.cboxs[allergen].setCheckState(2)
+                    self.cboxs[allergen].setEnabled(False)
+            else:
+                for allergen in self.setting_data["allergy_preset"][preset]:
+                    self.cboxs[allergen].setCheckState(0)
+                    self.cboxs[allergen].setEnabled(True)
     
     def getChecklist(self):
         checked = []
