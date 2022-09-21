@@ -14,6 +14,13 @@ from advtable import ComboDelegate
 from settings import *
 
 class MyApp(QMainWindow):
+    """
+    df: 식단표 정보를 담는 데이터프레임 (Ex: df.loc[1][1] = '소갈비')
+    allergy_df: df의 각 칸에 알러지 충돌여부를 담는 데이터 프레임 (Ex: allergy_df.loc[1][1] = 소고기)
+    log_df: 사용자가 식단표(df)의 내용을 변경시 그 변경사항을 저장하는 데이터프레임 (로그)
+    allergy_checked
+    nutrition_checked
+    """
     df = pd.DataFrame()
     allergy_df = pd.DataFrame()
     allergy_checked = False
@@ -27,54 +34,62 @@ class MyApp(QMainWindow):
         self.initUI()
 
     def initUI(self):
+        #메인화면을 구성...
         screen = QDesktopWidget().availableGeometry()
         self.resize(int(screen.width()/2), int(screen.height()/2))
 
         widget = QWidget()
         layout = QGridLayout(widget)
 
+        #self.table: 사용자에게 보여지는 식단표
         self.table = QTableWidget()
+        #식단표 칸을 더블클릭하면 수정을 할 수 있도록 설정
         self.table.setEditTriggers(QAbstractItemView.DoubleClicked)
-        #scroll = QScrollArea()
-        #scroll.setWidget(self.table)
+        #식단표 칸을 클릭하면 아래쪽 상태줄에 해당 칸의 특이사항을 출력하도록 설정
         self.table.cellClicked.connect(self.cellinfo)
+        #식단표 칸을 오른쪽 클릭하면 영양량 확인, 식재료 확인 등의 컨텍스트 메뉴가 뜨도록 설정
         self.table.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
 
+        #위에서 언급한 컨텍스트 메뉴 설정
         nutritionContextAction = QAction('영양량 보기', self.table)
         ingredientContextAction = QAction('식재료 보기', self.table)
         nutritionContextAction.triggered.connect(self.cellnutrition)
         ingredientContextAction.triggered.connect(self.cellingredient)     
         self.table.addAction(nutritionContextAction)    
         self.table.addAction(ingredientContextAction)
+        #셀을 더블클릭해서 수정시 앞부분만 입력하면 자동완성 목록이 뜨게 설정
         self.delegater = ComboDelegate()
         self.delegater.setItems(self.menu_items)
+        #수정이 끝나면 셀에 변경내용이 반영되도록하는 부분
         self.delegater.closeEditor.connect(self.updateTable)
-        self.table.setItemDelegate(self.delegater)     
-
+        self.table.setItemDelegate(self.delegater)
+        #메인화면에 설정 끝낸 식단표 추가
         layout.addWidget(self.table, 0, 0)
+
+        #메인화면 아래쪽의 식단표의 영양표 설정
         self.nuttable = QTableWidget()
         self.nuttable.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        #scroll = QScrollArea()
-        #scroll.setWidget(self.nuttable)
-
+        #메인화면에 영양표 추가
         layout.addWidget(self.nuttable, 1, 0)
         
+        #메인화면 오른쪽의 영양량 그래프 설정
         graphbox = QVBoxLayout()
         self.nutcombo = QComboBox()
         self.nutcombo.currentTextChanged.connect(self.drawGraph)
         self.nutcombo.addItems(self.nutrition.columns.tolist())
         graphbox.addWidget(self.nutcombo)
-
         self.graphwindow = QtWebEngineWidgets.QWebEngineView(self)
         graphbox.addWidget(self.graphwindow)
-
+        # 메인화면에 그래프 추가
         layout.addLayout(graphbox, 0, 1, 2, 1)
 
+        #메인화면 레이아웃 구조조정
         layout.setColumnStretch(0, 3)
         layout.setColumnStretch(1, 1)
         layout.setRowStretch(0,2)
         layout.setRowStretch(1,1)
 
+        #위쪽의 메뉴바 설정
         settingsAction = QAction('설정', self)
         settingsAction.setStatusTip('프로그램 설정을 변경합니다.')
         settingsAction.triggered.connect(self.settings)
@@ -115,6 +130,7 @@ class MyApp(QMainWindow):
         checkmenu.addAction(nutritionAction)
         checkmenu.addAction(ingredientAction)           
 
+        #프로그램의 아이콘과 이름 설정
         self.setWindowTitle('Dietkit')
         self.setWindowIcon(QIcon('icon.ico'))
 
@@ -123,6 +139,7 @@ class MyApp(QMainWindow):
         self.show()
 
     def initdata(self):
+        #프로그램 시작 시 나오는 로딩 스크린 구성
         loading_screen = QDialog()
         loading_screen.resize(550, 75)
         loading_screen.setWindowTitle('데이터 불러오는중')
@@ -133,10 +150,13 @@ class MyApp(QMainWindow):
         loading_screen.show()
         loading_bar.setValue(0)
         qApp.processEvents()
+
+        #식재료 DB 불러오기 (self.ingredients에 저장)
         if os.path.exists(self.setting_data['paths']['ingredients']):
             self.ingredients = pd.read_csv(self.setting_data['paths']['ingredients'], encoding = 'cp949', index_col = 0)
         else:
             self.message_popup('기본 식재료 DB를 불러오지 못했습니다.\n데이터 설정을 확인 후 재시작해주십시오.')
+        #메뉴 DB 불러오기 (self.menus에 저장)
         if os.path.exists(self.setting_data['paths']['menus']):
             temp = pd.read_csv(self.setting_data['paths']['menus'], encoding = 'cp949', index_col = None)
             self.menus = pd.DataFrame(data = temp['weight'].values, index = pd.MultiIndex.from_frame(temp.fillna(method = 'ffill')[['name', 'ingredient']]), columns = ['weight'])
@@ -144,10 +164,12 @@ class MyApp(QMainWindow):
             del temp
         else:
             self.message_popup('기본 메뉴 DB를 불러오지 못했습니다.\n데이터 설정을 확인 후 재시작해주십시오.')
+        #메뉴별 알러지 정보 불러오기 (self.allergy에 저장)
         if os.path.exists(self.setting_data['paths']['allergy']):
             self.allergy = pd.read_csv(self.setting_data['paths']['allergy'], encoding = 'cp949', index_col = 0).astype(bool)
         else:
             self.message_popup('기본 알러지 DB를 불러오지 못했습니다.\n데이터 설정을 확인 후 재시작해주십시오.')
+        #메뉴별 영양량 불러오기 (사용자 설정에 따라 선택적)
         if self.setting_data['nutsave_enable'] and os.path.exists(self.setting_data['paths']['nutritions']):
             self.nutrition = pd.read_csv(self.setting_data['paths']['nutritions'], encoding = 'cp949', index_col = 0)
         elif os.path.exists(self.setting_data['paths']['ingredients']) and os.path.exists(self.setting_data['paths']['menus']):
@@ -169,6 +191,7 @@ class MyApp(QMainWindow):
         loading_screen.close()
 
     def setTable(self):
+        #메인화면에 표시되는 식단표를 구성
         self.allergy_df = pd.DataFrame(index = range(self.df.shape[0]), columns = range(self.df.shape[1]), data = [])
         for j in range(len(self.df.columns)):
             for i in range(len(self.df.index)):
@@ -183,6 +206,7 @@ class MyApp(QMainWindow):
         self.drawGraph()
         
     def setnutTable(self):
+        #메인화면에 표시되는 식단표의 영양표를 구성
         self.nuttable.setColumnCount(self.df.shape[1])
         self.nuttable.setRowCount(len(self.nutrition.columns))
         self.nuttable.setHorizontalHeaderLabels([str(i+1) for i in range(self.df.shape[1])])
@@ -212,6 +236,7 @@ class MyApp(QMainWindow):
             self.nuttable.verticalHeader().setSectionResizeMode(idx, QHeaderView.ResizeToContents)
 
     def initTable(self):
+        #새로운 빈 식단표를 만드는 파트
         row, dummy = QInputDialog.getInt(self, '식단표 생성', '행의 갯수')
         col, dummy = QInputDialog.getInt(self, '식단표 생성', '열의 갯수')
         self.table.setColumnCount(col)
@@ -223,6 +248,7 @@ class MyApp(QMainWindow):
         self.statusBar().showMessage('식단표 생성이 완료되었습니다. 편집을 원하는 칸을 더블클릭하면 메뉴를 삽입할 수 있습니다.')
 
     def loadTable(self):
+        #파일에서 식단표를 불러오는 파트
         fname = QFileDialog.getOpenFileName(self, '식단표 위치', './', filter = '*.csv')
         if fname[0] == '':
             return
@@ -236,40 +262,50 @@ class MyApp(QMainWindow):
         self.statusBar().showMessage('식단표 불러오기가 완료되었습니다. 편집을 원하는 칸을 더블클릭하면 메뉴를 삽입할 수 있습니다.')
 
     def saveTable(self):
+        #작성중인 식단표를 파일로 저장
         fname = QFileDialog.getSaveFileName(self, '저장 위치', './', filter = '*.csv')
         if fname[0] != '':
             self.df.to_csv(fname[0], index = True, encoding = 'cp949')
 
     def updateTable(self):
+        #식단표 내용에 변화가 있을 시 실행
+        #변경내용을 로그에 저장
         before = self.df.iloc[self.table.selectedIndexes()[0].row(), self.table.selectedIndexes()[0].column()]
         after = self.table.item(self.table.selectedIndexes()[0].row(), self.table.selectedIndexes()[0].column()).text()
         if before == after:
             return
         if self.setting_data['log_enable']:
             self.log_df.loc[len(self.log_df)] = [time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime(time.time())), before, after]
+        #해당 칸에 있던 특이사항 (알러지 검출 등등)을 초기화
         self.df.iloc[self.table.selectedIndexes()[0].row(), self.table.selectedIndexes()[0].column()] = self.table.item(self.table.selectedIndexes()[0].row(), self.table.selectedIndexes()[0].column()).text()
         self.allergy_df.iloc[self.table.selectedIndexes()[0].row(), self.table.selectedIndexes()[0].column()] = []
         self.table.item(self.table.selectedIndexes()[0].row(), self.table.selectedIndexes()[0].column()).setBackground(QtGui.QColor(255,255,255))
+        # 변경사항을 영양표와 그래프에 반영
         self.setnutTable()
         self.drawGraph()
     
     def drawGraph(self, nutrition = 'Undefined'):
+        #영양량 그래프 그리기
         if self.df.shape[0] == 0:
             return
         if nutrition == 'Undefined':
             nutrition = self.nutcombo.currentText()
+        #그래프 기본 틀 잡기
         fig = px.bar(y = [v+1 for v in range(self.df.shape[1])], x = self.nutrition_df[nutrition].tolist(), orientation = 'h')
         fig.update_yaxes(title = 'Diet No.', range = [self.df.shape[1] + 0.5, 0.5])
         fig.update_xaxes(title = nutrition)
         fig.update_layout(showlegend=False)
         fig.update_traces(marker_color = 'lightgreen')
+        #권정 영양량에 따른 상하한선 표시 추가
         if self.setting_data['criteria'][nutrition][0]:
             fig.add_shape(type="line", line_color="blue", line_width=3, opacity=1, line_dash="dot", y0=-1, y1=self.df.shape[1] + 1, x0=self.setting_data['criteria'][nutrition][0], x1=self.setting_data['criteria'][nutrition][0])
         if self.setting_data['criteria'][nutrition][1]:
             fig.add_shape(type="line", line_color="red", line_width=3, opacity=1, line_dash="dot", y0=-1, y1=self.df.shape[1] + 1, x0=self.setting_data['criteria'][nutrition][1], x1=self.setting_data['criteria'][nutrition][1])
+        #그래프 화면에 띄우기
         self.graphwindow.setHtml(fig.to_html(include_plotlyjs = 'cdn'))
         
     def cellinfo(self, row, column):
+        #식단표 상의 특정 칸을 클릭했을 때 메시지를 띄우는 파트
         message = ''
         if self.allergy_checked and len(self.allergy_df.iloc[row, column]) > 0:
             message += '알러지 문제가 발견됨: '
@@ -277,6 +313,7 @@ class MyApp(QMainWindow):
         self.statusBar().showMessage(message)
 
     def cellnutrition(self):
+        #식단표 오른쪽 클릭시 나오는 컨텍스트 메뉴 중 영양량 표시를 구현
         try:
             menu_name = self.df.iloc[self.table.selectedIndexes()[0].row(), self.table.selectedIndexes()[0].column()]
             nutrition_info = self.nutrition.loc[menu_name]
@@ -308,6 +345,7 @@ class MyApp(QMainWindow):
         a.exec_()
 
     def cellingredient(self):
+        #식단표 오른쪽 클릭시 나오는 컨텍스트 메뉴 중 식재료 표시를 구현
         try:
             menu_name = self.df.iloc[self.table.selectedIndexes()[0].row(), self.table.selectedIndexes()[0].column()]
             ing_info = self.menus.xs(menu_name).iloc[:,0].to_dict().items()
@@ -340,6 +378,8 @@ class MyApp(QMainWindow):
 
         
     def checkallergy(self):
+        #식단표 알러지 검사기능을 구현
+        #allergy_checker.py를 이용해 체크하고 싶은 알러지 리스트를 받아옴
         win = AllergyWindow(self.allergy.columns.tolist(), allow_preset = True)
         checklist = win.checklist
         if len(checklist) == 0:
@@ -351,16 +391,19 @@ class MyApp(QMainWindow):
                 try:
                     ings = self.menus.xs(self.df.iloc[row, col]).index.tolist()
                 except KeyError:
+                    #KeyError가 발생한 셀을 노랗게 칠함
                     self.table.item(row, col).setBackground(QtGui.QColor(252,250,104))
                     self.allergy_df.iloc[row, col] = 'DB 상에 존재하지 않는 메뉴'
                     continue
                 violations = self.allergy.loc[ings, checklist].sum(axis = 0).astype(bool)
                 self.allergy_df.iloc[row, col] = violations.loc[violations].index.tolist()
+                #식단표 각 셀 중 알러지와 충돌되는 셀을 붉게 칠함
                 if len(self.allergy_df.iloc[row, col]) > 0:
                     self.table.item(row, col).setBackground(QtGui.QColor(255,169,140))
         self.allergy_checked = True
 
     def checknutrition(self):
+        #식단표의 각 일자 영양량을 계산하고 파일로 출력
         nutrition_df = pd.DataFrame(index = range(self.df.shape[1]), columns = self.ingredients.columns, data = 0.0)
         error_cols = []
         for col in range(self.df.shape[1]):
@@ -384,6 +427,7 @@ class MyApp(QMainWindow):
                 self.message_popup('주어진 이름으로 파일을 저장하는데 실패했습니다.\n해당 파일이 열려있을 수 있습니다.')
 
     def checkingredient(self):
+        #식단표의 각 일자 식재료 양을 계산하고 파일로 출력
         ingredient_df = pd.DataFrame(columns=['식단번호', '메뉴일련번호', '메뉴', '식재료', '함량(g)'])
         ingredient_df = ingredient_df.set_index(['식단번호', '메뉴일련번호', '메뉴', '식재료'])
         error_cols = []
@@ -408,6 +452,7 @@ class MyApp(QMainWindow):
                 self.message_popup('주어진 이름으로 파일을 저장하는데 실패했습니다.\n해당 파일이 열려있을 수 있습니다.')
 
     def settings(self):
+        # 설정 창 구현 (settings.py 참조)
         setting = SettingWindow(self.allergy.columns.tolist())
         with open('./data/settings.json', 'r') as f:
             new_setting = json.load(f)
@@ -419,6 +464,7 @@ class MyApp(QMainWindow):
         self.setting_data = new_setting
 
     def message_popup(self, message = '미구현'):
+        # message에 입력된 내용을 팝업으로 띄움
         a = QMessageBox()
         a.setText(message)
         a.setStandardButtons(QMessageBox.Ok)
