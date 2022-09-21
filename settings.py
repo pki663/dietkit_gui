@@ -194,6 +194,8 @@ class SettingWindow(QDialog):
     def addPreset(self):
         # 알러지 프리셋 추가
         preset_name, ok = QInputDialog.getText(self, '프리셋 추가', '프리셋의 이름을 입력해 주십시오')
+        if not preset_name:
+            return
         if preset_name in self.setting_data['allergy_preset'].keys():
             a = QMessageBox()
             a.setText('이미 존재하는 프리셋 이름입니다.')
@@ -207,7 +209,10 @@ class SettingWindow(QDialog):
     def modifyPreset(self, preset = None):
         # 알러지 프리셋 수정
         if not preset:
-            preset = self.preset_list.currentItem().text()
+            try:
+                preset = self.preset_list.currentItem().text()
+            except AttributeError:
+                return
         input_allergy = AllergyWindow(self.allergy_header)
         self.setting_data['allergy_preset'][preset] = input_allergy.checklist
         self.preset_list.setCurrentRow(self.preset_list.count() - 1)
